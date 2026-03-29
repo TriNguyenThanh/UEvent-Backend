@@ -1,0 +1,41 @@
+@startuml
+autonumber
+actor "Người tham gia" as User
+participant "Mobile App" as App
+participant "Feedback Service" as FB
+participant "Event Service" as Event
+
+User -> App : Gửi feedback
+App -> FB : submitFeedback(data)
+
+activate FB
+FB -> Event : checkEventStatus(eventId, userId)
+activate Event
+Event --> FB : status (Ended, Joined, Invalid)
+deactivate Event
+
+alt Trường hợp thành công: Sự kiện đã kết thúc & Người dùng có tham gia
+    FB -> FB : validateContent()
+    alt Nội dung hợp lệ
+        FB -> FB : saveFeedback()
+        FB --> App : 200 OK (Feedback đã ghi nhận)
+        App --> User : Hiển thị: "Cảm ơn bạn đã góp ý!"
+    else Nội dung rỗng hoặc quá dài
+        FB --> App : 400 Bad Request (Dữ liệu không hợp lệ)
+        App --> User : Hiển thị: "Vui lòng kiểm tra lại nội dung"
+    end
+
+else Lỗi: Sự kiện chưa kết thúc
+    FB --> App : 403 Forbidden (Event chưa kết thúc)
+    App --> User : Hiển thị: "Bạn chỉ có thể feedback khi sự kiện kết thúc"
+
+else Lỗi: Người dùng không tham gia sự kiện này
+    FB --> App : 403 Forbidden (Chưa đăng ký tham gia)
+    App --> User : Hiển thị: "Bạn không có quyền feedback sự kiện này"
+
+else Lỗi hệ thống: Event Service không phản hồi
+    FB --> App : 500 Internal Error
+    App --> User : Hiển thị: "Hệ thống bận, vui lòng thử lại sau"
+end
+deactivate FB
+@enduml

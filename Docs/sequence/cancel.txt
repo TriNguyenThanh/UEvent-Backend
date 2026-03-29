@@ -1,0 +1,36 @@
+@startuml
+autonumber
+actor "Người tham gia" as User
+participant "Mobile App" as App
+participant "Registration Service" as Reg
+participant "Event Service" as Event
+participant "Payment Service" as Payment
+database "Event DB" as DB
+
+User -> App : Chọn "Hủy đăng ký"
+App -> Reg : cancelRegistration(registrationId)
+
+activate Reg
+Reg -> Event : getEventPolicy(eventId)
+activate Event
+Event --> Reg : cancellationPolicy (Hạn hủy)
+deactivate Event
+
+Reg -> Reg : checkPolicy(currentTime)
+
+alt Quá hạn hủy (Violation)
+    Reg --> App : Error: Quá thời hạn hủy theo quy định
+    App --> User : Hiển thị: "Không thể hủy do đã sát ngày sự kiện"
+
+else Hợp lệ để hủy
+    Reg -> DB : updateStatus("Cancelled")
+    activate DB
+    DB --> Reg : Success
+    deactivate DB
+
+    Reg --> App : 200 OK (Hủy thành công)
+    App --> User : Hiển thị: "Hủy thành công"
+end
+
+deactivate Reg
+@enduml
