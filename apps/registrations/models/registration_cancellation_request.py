@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from common.models import BaseModel
 
 
@@ -13,9 +14,14 @@ class RegistrationCancellationRequest(BaseModel):
         on_delete=models.CASCADE,
         related_name="cancellation_requests",
     )
-    reason = models.TextField()
+    event = models.ForeignKey("events.Event", on_delete=models.CASCADE, related_name="cancellation_requests")
+    requester_user = models.ForeignKey(
+        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="cancellation_requests"
+    )
+    reason = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=RequestStatus.choices, default=RequestStatus.PENDING)
-    reviewed_by = models.ForeignKey(
+    requested_at = models.DateTimeField(default=timezone.now)
+    reviewed_by_user = models.ForeignKey(
         "users.User",
         on_delete=models.SET_NULL,
         blank=True,

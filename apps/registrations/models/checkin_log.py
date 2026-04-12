@@ -1,26 +1,31 @@
 from django.db import models
+from django.utils import timezone
 from common.models import BaseModel
 
 
 class CheckinLog(BaseModel):
     class CheckinResult(models.TextChoices):
         SUCCESS = "success", "Success"
-        FAILED = "failed", "Failed"
+        INVALID_FORMAT = "invalid_format", "Invalid format"
+        INVALID_TICKET = "invalid_ticket", "Invalid ticket"
+        ALREADY_CHECKED_IN = "already_checked_in", "Already checked in"
+        EVENT_UNAVAILABLE = "event_unavailable", "Event unavailable"
 
-    ticket = models.ForeignKey("registrations.Ticket", on_delete=models.CASCADE, related_name="checkin_logs")
-    scanned_by = models.ForeignKey(
-        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="checkin_logs"
+    event = models.ForeignKey("events.Event", on_delete=models.RESTRICT, related_name="checkin_logs")
+    ticket = models.ForeignKey("registrations.Ticket", on_delete=models.SET_NULL, null=True, blank=True, related_name="checkin_logs")
+    scanner_user = models.ForeignKey(
+        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="checkin_scans"
     )
-    scanned_at = models.DateTimeField(auto_now_add=True)
+    checked_in_at = models.DateTimeField(default=timezone.now)
     result = models.CharField(max_length=20, choices=CheckinResult.choices)
-    failure_reason = models.CharField(max_length=255, blank=True)
+    note = models.TextField(blank=True, null=True)
 
     class Meta(BaseModel.Meta):
         db_table = "checkin_logs"
-        ordering = ["-scanned_at", "-created_at"]
+        ordering = ["-checked_in_at", "-created_at"]
         indexes = [
-            models.Index(fields=["ticket", "scanned_at"]),
-            models.Index(fields=["result", "scanned_at"]),
+            models.Index(fields=["ticket", "checked_in_at"]),
+            models.Index(fields=["event", "checked_in_at"]),
         ]
 
     def __str__(self):

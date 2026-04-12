@@ -3,6 +3,10 @@ from common.models import BaseModel
 
 
 class Event(BaseModel):
+    class Visibility(models.TextChoices):
+        PUBLIC = "public", "Public"
+        PRIVATE = "private", "Private"
+
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
         PENDING = "pending", "Pending"
@@ -23,13 +27,17 @@ class Event(BaseModel):
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=280, unique=True)
     description = models.TextField(blank=True)
+    visibility = models.CharField(max_length=20, choices=Visibility.choices, default=Visibility.PUBLIC)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     registration_open_at = models.DateTimeField(blank=True, null=True)
     registration_close_at = models.DateTimeField(blank=True, null=True)
     cancellation_deadline_at = models.DateTimeField(blank=True, null=True)
     start_at = models.DateTimeField()
     end_at = models.DateTimeField()
-    capacity = models.PositiveIntegerField(default=0)
+    max_capacity = models.PositiveIntegerField(null=True, blank=True)
+    location_snapshot = models.CharField(max_length=500, blank=True, null=True)
+    cover_image_url = models.URLField(blank=True, null=True)
+    deep_link = models.CharField(max_length=500, blank=True, null=True)
 
     class Meta(BaseModel.Meta):
         db_table = "events"

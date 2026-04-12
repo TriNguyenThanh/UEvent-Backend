@@ -7,15 +7,19 @@ class EventRegistration(BaseModel):
         PENDING = "pending", "Pending"
         REGISTERED = "registered", "Registered"
         WAITLISTED = "waitlisted", "Waitlisted"
-        CANCEL_REQUESTED = "cancel_requested", "Cancel requested"
+        CANCEL_PENDING = "cancel_pending", "Cancel pending"
         CANCELLED = "cancelled", "Cancelled"
+        REJECTED = "rejected", "Rejected"
         CHECKED_IN = "checked_in", "Checked in"
 
     event = models.ForeignKey("events.Event", on_delete=models.CASCADE, related_name="registrations")
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="event_registrations")
     status = models.CharField(max_length=24, choices=RegistrationStatus.choices, default=RegistrationStatus.PENDING)
     form_answers_jsonb = models.JSONField(default=dict, blank=True)
+    answers_locked = models.BooleanField(default=False)
     registered_at = models.DateTimeField(auto_now_add=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancel_reason = models.CharField(max_length=500, blank=True, null=True)
 
     class Meta(BaseModel.Meta):
         db_table = "event_registrations"
