@@ -10,6 +10,7 @@ class UserSession(BaseModel):
     device_name = models.CharField(max_length=120, blank=True)
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     user_agent = models.TextField(blank=True)
+    fcm_token = models.CharField(max_length=255, blank=True, null=True)
     expires_at = models.DateTimeField()
     revoked_at = models.DateTimeField(blank=True, null=True)
 

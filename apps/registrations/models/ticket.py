@@ -1,21 +1,24 @@
 from django.db import models
+from django.utils import timezone
 from common.models import BaseModel
 
 
 class Ticket(BaseModel):
     class TicketStatus(models.TextChoices):
-        ISSUED = "issued", "Issued"
+        VALID = "valid", "Valid"
         USED = "used", "Used"
         EXPIRED = "expired", "Expired"
-        REVOKED = "revoked", "Revoked"
+        CANCELLED = "cancelled", "Cancelled"
 
     registration = models.OneToOneField(
         "registrations.EventRegistration", on_delete=models.CASCADE, related_name="ticket"
     )
     ticket_code = models.CharField(max_length=50, unique=True)
-    qr_payload = models.TextField()
+    qr_payload = models.TextField(unique=True)
     qr_signature = models.CharField(max_length=255)
-    status = models.CharField(max_length=20, choices=TicketStatus.choices, default=TicketStatus.ISSUED)
+    status = models.CharField(max_length=20, choices=TicketStatus.choices, default=TicketStatus.VALID)
+    issued_at = models.DateTimeField(default=timezone.now)
+    used_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField()
 
     class Meta(BaseModel.Meta):
@@ -23,7 +26,7 @@ class Ticket(BaseModel):
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["ticket_code"]),
-            models.Index(fields=["status", "expires_at"]),
+            models.Index(fields=["status", "issued_at"]),
             models.Index(fields=["registration"]),
         ]
 

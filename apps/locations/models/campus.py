@@ -6,6 +6,7 @@ class Campus(BaseModel):
     name = models.CharField(max_length=200, unique=True)
     code = models.CharField(max_length=50, unique=True)
     address = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta(BaseModel.Meta):
         db_table = "campuses"

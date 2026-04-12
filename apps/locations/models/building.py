@@ -3,9 +3,10 @@ from common.models import BaseModel
 
 
 class Building(BaseModel):
-    campus = models.ForeignKey("locations.Campus", on_delete=models.CASCADE, related_name="buildings")
+    campus = models.ForeignKey("locations.Campus", on_delete=models.RESTRICT, related_name="buildings")
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=50)
+    is_active = models.BooleanField(default=True)
 
     class Meta(BaseModel.Meta):
         db_table = "buildings"

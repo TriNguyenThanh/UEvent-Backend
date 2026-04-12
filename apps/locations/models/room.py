@@ -3,10 +3,11 @@ from common.models import BaseModel
 
 
 class Room(BaseModel):
-    building = models.ForeignKey("locations.Building", on_delete=models.CASCADE, related_name="rooms")
+    building = models.ForeignKey("locations.Building", on_delete=models.RESTRICT, related_name="rooms")
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=50)
-    capacity = models.PositiveIntegerField(default=0)
+    capacity = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta(BaseModel.Meta):
         db_table = "rooms"
