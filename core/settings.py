@@ -31,7 +31,7 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.moderation',
     'apps.support',
-    'apps.core',
+    'apps.app_settings',
 ]
 
 MIDDLEWARE = [
