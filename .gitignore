@@ -219,3 +219,23 @@ __marimo__/
 Docs/ERD_freeze_checklist.md
 Docs/Relational_DDL_Spec.md
 Docs/Tutorial_System_Admin_Django.md
+
+#**/*migrations*
+/script.py
+#**/**/*migrations*
+*/*/migrations/*
+!*/*/migrations/__init__.py
+# Python cache files
+__pycache__/
+*/__pycache__/
+**/__pycache__/
+*/*/__pycache__/*
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+*$py.class
+/zimage-test/
+/sdockerDB/
+/script_server.py
+/logs/
