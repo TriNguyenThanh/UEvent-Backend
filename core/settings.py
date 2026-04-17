@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'apps.moderation',
     'apps.support',
     'apps.app_settings',
+    'apps.system_admin',
 ]
 
 MIDDLEWARE = [

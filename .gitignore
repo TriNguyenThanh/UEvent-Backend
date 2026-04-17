@@ -218,6 +218,7 @@ __marimo__/
 .env
 Docs/ERD_freeze_checklist.md
 Docs/Relational_DDL_Spec.md
+Docs/Tutorial_System_Admin_Django.md
 
 #**/*migrations*
 /script.py
