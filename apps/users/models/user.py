@@ -1,10 +1,14 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from django.db.models import Q
-from common.models import BaseModel
+from common.models import BaseModel, SoftDeleteManager
 
+class CustomUserManager(SoftDeleteManager, UserManager):
+    pass
 
 class User(BaseModel, AbstractUser):
+    objects = CustomUserManager()
+
     class AccountStatus(models.TextChoices):
         ACTIVE = "active", "Active"
         PENDING = "pending", "Pending"
