@@ -3,3 +3,4 @@ djangorestframework
 psycopg2-binary
 django-environ
 drf-yasg
+django-filter
