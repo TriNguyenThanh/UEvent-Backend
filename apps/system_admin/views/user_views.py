@@ -8,8 +8,8 @@ from drf_yasg.utils import swagger_auto_schema
 
 from apps.users.models import User
 from common.exceptions import ValidationError, NotFoundError
-from .services import AdminUserService
-from .serializers import (
+from ..services.user_services import AdminUserService
+from ..serializers.user_serializers import (
     AdminUserListOutputSerializer,
     AdminUserDetailOutputSerializer,
     AdminUpdateUserInputSerializer,

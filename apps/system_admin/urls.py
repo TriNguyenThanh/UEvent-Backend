@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from .views import user_views as views
 
 app_name = "system_admin"
 
