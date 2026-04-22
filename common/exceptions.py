@@ -109,6 +109,12 @@ def custom_exception_handler(exc, context):
         )
 
     # Handle generic exceptions
+    import logging
+    import traceback
+    logging.getLogger('django.request').error(
+        f"Internal Server Error: {exc}\n{traceback.format_exc()}"
+    )
+    
     return Response(
         {
             "error": "internal_error",
