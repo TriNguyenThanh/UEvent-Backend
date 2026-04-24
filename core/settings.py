@@ -118,6 +118,18 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Nhập JWT token theo format: **Bearer &lt;access_token&gt;**',
+        },
+    },
+    'USE_SESSION_AUTH': False,
+}
+
 
 LOGGING = {
     'version': 1,

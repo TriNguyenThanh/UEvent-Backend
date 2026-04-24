@@ -24,13 +24,13 @@ class AdminAuthService:
         user = authenticate(username=username, password=password)
 
         if user is None:
-            raise UnauthorizedError("Tên đăng nhập hoặc mật khẩu không đúng.")
+            raise UnauthorizedError(code='invalid_credentials', detail="Thông tin đăng nhập không hợp lệ.")
 
         if not user.is_active:
-            raise UnauthorizedError("Tài khoản đã bị vô hiệu hóa.")
+            raise UnauthorizedError(code='account_disabled', detail="Tài khoản đã bị vô hiệu hóa.")
 
         if not (user.is_staff or user.is_superuser):
-            raise ForbiddenError("Chỉ quản trị viên mới có quyền truy cập.")
+            raise ForbiddenError(code='insufficient_permissions', detail="Chỉ quản trị viên mới có quyền truy cập.")
 
         refresh = RefreshToken.for_user(user)
 
