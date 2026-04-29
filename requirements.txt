@@ -5,3 +5,9 @@ django-environ
 drf-yasg
 django-filter
 djangorestframework-simplejwt
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-django
+opentelemetry-exporter-otlp
+python-json-logger
+Deprecated

@@ -10,6 +10,8 @@ env = environ.Env()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', default=False)
@@ -110,8 +112,8 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=env.int('ACCESS_TOKEN_LIFETIME', default=30)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=env.int('REFRESH_TOKEN_LIFETIME', default=60)),
     'ROTATE_REFRESH_TOKENS': False,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
@@ -142,11 +144,22 @@ LOGGING = {
         'simple': {
             'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
         },
+        'json': {
+            '()': 'common.logging.TraceIdJsonFormatter',
+        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
+        },
+        'audit_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOG_DIR / 'audit.json'),
+            'maxBytes': 50 * 1024 * 1024,
+            'backupCount': 5,
+            'formatter': 'json',
+            'encoding': 'utf-8',
         },
     },
     'loggers': {
@@ -161,9 +174,9 @@ LOGGING = {
             'propagate': False,
         },
         'uevent.audit': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
+            'handlers': ['console', 'audit_file'],
+            'level': 'INFO',
+            'propagate': False,
         },
     },
 }
