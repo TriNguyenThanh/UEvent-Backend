@@ -17,6 +17,7 @@ from ..serializers.user_serializers import (
     AdminBanUserInputSerializer,
     AdminUnbanUserInputSerializer,
     AdminAssignRoleInputSerializer,
+    UserStatisticsOutputSerializer,
 )
 
 class AdminUserListView(generics.ListAPIView):
@@ -52,7 +53,8 @@ class AdminUserDetailUpdateDeleteView(APIView):
         responses={200: AdminUserDetailOutputSerializer()}
     )
     def patch(self, request, pk):
-        serializer = AdminUpdateUserInputSerializer(data=request.data)
+        user = AdminUserService.get_user(pk)
+        serializer = AdminUpdateUserInputSerializer(instance=user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         user = AdminUserService.update_user(
             actor=request.user,
@@ -157,3 +159,21 @@ class AdminRemoveRoleView(APIView):
             role_code=role_code
         )
         return Response(AdminUserDetailOutputSerializer(user).data)
+
+
+class AdminUserStatisticsView(APIView):
+    """
+    Thống kê tổng quan về user cho Admin Dashboard.
+    """
+    permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
+
+    @swagger_auto_schema(
+        operation_summary="User Statistics",
+        operation_description="Thống kê tổng số user, phân bổ theo status/faculty/role, và biểu đồ user mới 30 ngày.",
+        responses={200: UserStatisticsOutputSerializer()},
+        tags=["Admin User Management"],
+    )
+    def get(self, request):
+        data = AdminUserService.get_user_statistics()
+        output = UserStatisticsOutputSerializer(data)
+        return Response(output.data, status=status.HTTP_200_OK)
