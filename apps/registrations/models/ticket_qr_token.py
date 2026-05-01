@@ -2,7 +2,6 @@ from django.db import models
 from django.utils import timezone
 from common.models import BaseModel
 
-
 class TicketQrToken(BaseModel):
     ticket = models.ForeignKey("registrations.Ticket", on_delete=models.CASCADE, related_name="qr_tokens")
     token_hash = models.CharField(max_length=255, unique=True)
@@ -19,6 +18,4 @@ class TicketQrToken(BaseModel):
         ]
 
     def __str__(self):
-        return f"QR:{self.ticket_id}:{self.valid_from.isoformat()}"
-
-
+        return f"QR:{self.ticket.id}:{self.valid_from.isoformat()}"

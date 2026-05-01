@@ -1,3 +1,5 @@
+environ
+gunicorn
 django
 djangorestframework
 psycopg2-binary

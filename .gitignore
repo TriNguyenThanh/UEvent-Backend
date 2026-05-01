@@ -216,6 +216,7 @@ __marimo__/
 .streamlit/secrets.toml
 
 .env
+.env.cloud
 Docs/ERD_freeze_checklist.md
 Docs/Relational_DDL_Spec.md
 
@@ -238,3 +239,7 @@ __pycache__/
 /sdockerDB/
 /script_server.py
 /logs/
+
+**/.agents/*
+**/.cursor/*
+.cursorrules

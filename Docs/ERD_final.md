@@ -807,12 +807,3 @@ erDiagram
 2. Dùng cơ chế scheduler hoặc lazy-rotation cho QR token 15 giây.
 3. Chuẩn API timezone: trả UTC ISO-8601, frontend tự convert.
 4. Vì không có payment trong MVP, các endpoint cancel không phụ thuộc payment service.
-
----
-
-## 10) Điểm cần xác nhận trước khi freeze schema
-1. Có cần lưu thêm snapshot thông tin người tham gia trong registration để phục vụ báo cáo lịch sử không.
-2. Có cần áp dụng soft delete cho `support_messages` hay chỉ cho `support_tickets`.
-3. Có cần tách `faculty` và `class_name` thành danh mục chuẩn hóa trong phase kế tiếp.
-
-Khi bạn xác nhận 3 điểm này, có thể freeze ERD Final để đi sang giai đoạn tạo model/migration.
