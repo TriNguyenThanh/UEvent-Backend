@@ -8,6 +8,7 @@ from urllib import error, request
 from django.conf import settings
 
 from common.exceptions import ValidationError
+from common.response_codes import ResponseCode
 
 
 class OpenSearchAuditClientError(Exception):
@@ -68,7 +69,7 @@ class OpenSearchAuditClient:
         if invalid_filters:
             raise ValidationError(
                 detail=f"Filter audit không được hỗ trợ: {', '.join(invalid_filters)}",
-                code="invalid_audit_filter",
+                code=ResponseCode.INVALID_AUDIT_FILTER,
             )
 
     @staticmethod

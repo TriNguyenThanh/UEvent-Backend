@@ -1,9 +1,5 @@
-from rest_framework.pagination import PageNumberPagination
+from common.pagination import EnvelopePageNumberPagination
 
 
-class AdminStandardPagination(PageNumberPagination):
-    """Pagination chuẩn cho admin list endpoints."""
-
-    page_size = 10
-    page_size_query_param = "page_size"
-    max_page_size = 100
+class AdminStandardPagination(EnvelopePageNumberPagination):
+    """Pagination chuẩn cho admin list endpoints theo envelope chung."""

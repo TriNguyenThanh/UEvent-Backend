@@ -2,6 +2,9 @@ from uuid import uuid4
 
 from django.http import JsonResponse
 
+from common.response_codes import ResponseCode
+from common.responses import build_api_response
+
 
 class RequestIdMiddleware:
     """Gắn request_id vào request/response để correlation với log/OpenSearch."""
@@ -43,7 +46,7 @@ class AdminAuthMiddleware:
         # 401 — chưa đăng nhập
         if not request.user or not request.user.is_authenticated:
             return self._error_response(
-                code='unauthorized',
+                code=ResponseCode.UNAUTHORIZED,
                 message='Authentication required.',
                 request_id=getattr(request, 'request_id', None),
                 status_code=401,
@@ -52,7 +55,7 @@ class AdminAuthMiddleware:
         # 403 — không phải admin
         if not self._is_admin(request.user):
             return self._error_response(
-                code='forbidden',
+                code=ResponseCode.FORBIDDEN,
                 message='Admin access only.',
                 request_id=getattr(request, 'request_id', None),
                 status_code=403,
@@ -63,12 +66,14 @@ class AdminAuthMiddleware:
     @staticmethod
     def _error_response(*, code, message, request_id, status_code):
         response = JsonResponse(
-            {
-                'code': code,
-                'message': message,
-                'details': None,
-                'request_id': request_id,
-            },
+            build_api_response(
+                success=False,
+                code=code,
+                message=message,
+                data=None,
+                errors=None,
+                request_id=request_id,
+            ),
             status=status_code,
         )
         if request_id:
