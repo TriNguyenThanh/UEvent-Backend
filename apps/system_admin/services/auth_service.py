@@ -1,10 +1,8 @@
-import logging
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from common.exceptions import UnauthorizedError, ForbiddenError
-
-audit_logger = logging.getLogger("uevent.audit")
+from .audit_service import AdminAuditService
 
 
 class AdminAuthService:
@@ -34,15 +32,11 @@ class AdminAuthService:
 
         refresh = RefreshToken.for_user(user)
 
-        audit_logger.info(
-            "Admin login success",
-            extra={
-                "action_type": "admin_login",
-                "actor_id": str(user.pk),
-                "target_type": "users.User",
-                "target_id": str(user.pk),
-                "system_module": "system_admin",
-            },
+        AdminAuditService.log_action(
+            action="admin_login",
+            actor=user,
+            target_type="users.User",
+            target_id=str(user.pk),
         )
 
         return {

@@ -1,4 +1,22 @@
+from uuid import uuid4
+
 from django.http import JsonResponse
+
+
+class RequestIdMiddleware:
+    """Gắn request_id vào request/response để correlation với log/OpenSearch."""
+
+    HEADER_NAME = 'X-Request-ID'
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request_id = request.headers.get(self.HEADER_NAME) or uuid4().hex
+        request.request_id = request_id
+        response = self.get_response(request)
+        response[self.HEADER_NAME] = request_id
+        return response
 
 
 class AdminAuthMiddleware:
@@ -24,27 +42,38 @@ class AdminAuthMiddleware:
 
         # 401 — chưa đăng nhập
         if not request.user or not request.user.is_authenticated:
-            return JsonResponse(
-                {
-                    'error': 'unauthorized',
-                    'message': 'Authentication required.',
-                    'status_code': 401,
-                },
-                status=401,
+            return self._error_response(
+                code='unauthorized',
+                message='Authentication required.',
+                request_id=getattr(request, 'request_id', None),
+                status_code=401,
             )
 
         # 403 — không phải admin
         if not self._is_admin(request.user):
-            return JsonResponse(
-                {
-                    'error': 'forbidden',
-                    'message': 'Admin access only.',
-                    'status_code': 403,
-                },
-                status=403,
+            return self._error_response(
+                code='forbidden',
+                message='Admin access only.',
+                request_id=getattr(request, 'request_id', None),
+                status_code=403,
             )
 
         return self.get_response(request)
+
+    @staticmethod
+    def _error_response(*, code, message, request_id, status_code):
+        response = JsonResponse(
+            {
+                'code': code,
+                'message': message,
+                'details': None,
+                'request_id': request_id,
+            },
+            status=status_code,
+        )
+        if request_id:
+            response[RequestIdMiddleware.HEADER_NAME] = request_id
+        return response
 
     @staticmethod
     def _is_admin(user):

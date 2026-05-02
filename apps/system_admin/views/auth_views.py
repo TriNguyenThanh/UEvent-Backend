@@ -7,12 +7,20 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from drf_yasg.utils import swagger_auto_schema
 
 from ..permissions import IsAdminOrSuperUser
+from ..serializers.common_serializers import AdminErrorResponseSerializer
 from ..serializers.auth_serializer import (
     AdminLoginInputSerializer,
     AdminLoginOutputSerializer,
     AdminUserInfoOutputSerializer,
 )
 from ..services.auth_service import AdminAuthService
+
+
+ADMIN_AUTH_ERROR_RESPONSES = {
+    400: AdminErrorResponseSerializer(),
+    401: AdminErrorResponseSerializer(),
+    403: AdminErrorResponseSerializer(),
+}
 
 
 class AdminLoginView(APIView):
@@ -29,8 +37,7 @@ class AdminLoginView(APIView):
         request_body=AdminLoginInputSerializer,
         responses={
             200: AdminLoginOutputSerializer(),
-            401: "Thông tin đăng nhập không hợp lệ.",
-            403: "Không có quyền truy cập (không phải admin).",
+            **ADMIN_AUTH_ERROR_RESPONSES,
         },
         tags=["Admin Auth"],
     )
@@ -57,6 +64,10 @@ class AdminTokenRefreshView(TokenRefreshView):
         operation_summary="Admin Token Refresh",
         operation_description="Gửi refresh token để nhận access token mới.",
         request_body=TokenRefreshSerializer,
+        responses={
+            200: "Access token mới.",
+            **ADMIN_AUTH_ERROR_RESPONSES,
+        },
         tags=["Admin Auth"],
     )
     def post(self, request, *args, **kwargs):
@@ -76,8 +87,7 @@ class AdminMeView(APIView):
         operation_description="Xác thực JWT token trong header và trả về thông tin quản trị viên hiện tại.",
         responses={
             200: AdminUserInfoOutputSerializer(),
-            401: "Token không hợp lệ hoặc đã hết hạn.",
-            403: "Không có quyền admin.",
+            **ADMIN_AUTH_ERROR_RESPONSES,
         },
         tags=["Admin Auth"],
     )

@@ -8,8 +8,10 @@ from drf_yasg.utils import swagger_auto_schema
 
 from apps.users.models import User
 from common.exceptions import ValidationError, NotFoundError
+from ..pagination import AdminStandardPagination
 from ..permissions import IsAdminOrSuperUser
 from ..services.user_services import AdminUserService
+from ..serializers.common_serializers import AdminErrorResponseSerializer
 from ..serializers.user_serializers import (
     AdminUserListOutputSerializer,
     AdminUserDetailOutputSerializer,
@@ -20,12 +22,22 @@ from ..serializers.user_serializers import (
     UserStatisticsOutputSerializer,
 )
 
+
+ADMIN_USER_ERROR_RESPONSES = {
+    400: AdminErrorResponseSerializer(),
+    401: AdminErrorResponseSerializer(),
+    403: AdminErrorResponseSerializer(),
+    404: AdminErrorResponseSerializer(),
+}
+
+
 class AdminUserListView(generics.ListAPIView):
     """
     Danh sách user với advanced filtering, searching, và sorting.
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     serializer_class = AdminUserListOutputSerializer
+    pagination_class = AdminStandardPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['username', 'email', 'full_name', 'student_code']
     filterset_fields = ['account_status', 'faculty', 'is_active']
@@ -42,7 +54,7 @@ class AdminUserDetailUpdateDeleteView(APIView):
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
 
-    @swagger_auto_schema(responses={200: AdminUserDetailOutputSerializer()})
+    @swagger_auto_schema(responses={200: AdminUserDetailOutputSerializer(), **ADMIN_USER_ERROR_RESPONSES})
     def get(self, request, pk):
         user = AdminUserService.get_user(pk)
         data = AdminUserDetailOutputSerializer(user).data
@@ -50,7 +62,7 @@ class AdminUserDetailUpdateDeleteView(APIView):
 
     @swagger_auto_schema(
         request_body=AdminUpdateUserInputSerializer,
-        responses={200: AdminUserDetailOutputSerializer()}
+        responses={200: AdminUserDetailOutputSerializer(), **ADMIN_USER_ERROR_RESPONSES}
     )
     def patch(self, request, pk):
         user = AdminUserService.get_user(pk)
@@ -79,7 +91,7 @@ class AdminBanUserView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     @swagger_auto_schema(
         request_body=AdminBanUserInputSerializer,
-        responses={200: AdminUserDetailOutputSerializer()}
+        responses={200: AdminUserDetailOutputSerializer(), **ADMIN_USER_ERROR_RESPONSES}
     )
     def post(self, request, pk):
         serializer = AdminBanUserInputSerializer(data=request.data)
@@ -99,7 +111,7 @@ class AdminUnbanUserView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     @swagger_auto_schema(
         request_body=AdminUnbanUserInputSerializer,
-        responses={200: AdminUserDetailOutputSerializer()}
+        responses={200: AdminUserDetailOutputSerializer(), **ADMIN_USER_ERROR_RESPONSES}
     )
     def post(self, request, pk):
         serializer = AdminUnbanUserInputSerializer(data=request.data)
@@ -117,7 +129,7 @@ class AdminRestoreUserView(APIView):
     Restore a soft-deleted user.
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
-    @swagger_auto_schema(responses={200: AdminUserDetailOutputSerializer()})
+    @swagger_auto_schema(responses={200: AdminUserDetailOutputSerializer(), **ADMIN_USER_ERROR_RESPONSES})
     def post(self, request, pk):
         user = AdminUserService.restore_user(
             actor=request.user,
@@ -133,7 +145,7 @@ class AdminAssignRoleView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     @swagger_auto_schema(
         request_body=AdminAssignRoleInputSerializer,
-        responses={200: AdminUserDetailOutputSerializer()}
+        responses={200: AdminUserDetailOutputSerializer(), **ADMIN_USER_ERROR_RESPONSES}
     )
     def post(self, request, pk):
         serializer = AdminAssignRoleInputSerializer(data=request.data)
@@ -151,7 +163,7 @@ class AdminRemoveRoleView(APIView):
     Remove a role from a user.
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
-    @swagger_auto_schema(responses={200: AdminUserDetailOutputSerializer()})
+    @swagger_auto_schema(responses={200: AdminUserDetailOutputSerializer(), **ADMIN_USER_ERROR_RESPONSES})
     def delete(self, request, pk, role_code):
         user = AdminUserService.remove_role(
             actor=request.user,
@@ -170,7 +182,7 @@ class AdminUserStatisticsView(APIView):
     @swagger_auto_schema(
         operation_summary="User Statistics",
         operation_description="Thống kê tổng số user, phân bổ theo status/faculty/role, và biểu đồ user mới 30 ngày.",
-        responses={200: UserStatisticsOutputSerializer()},
+        responses={200: UserStatisticsOutputSerializer(), **ADMIN_USER_ERROR_RESPONSES},
         tags=["Admin User Management"],
     )
     def get(self, request):
