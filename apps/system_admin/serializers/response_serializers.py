@@ -5,6 +5,10 @@ class AdminLoginEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
     """Envelope response cho admin login."""
 
 
+class AdminLogoutEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin logout."""
+
+
 class AdminUserInfoEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
     """Envelope response cho admin me."""
 

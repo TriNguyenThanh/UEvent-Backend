@@ -9,6 +9,7 @@ from ..permissions import IsAdminOrSuperUser
 from ..serializers.common_serializers import AdminErrorResponseSerializer
 from ..serializers.response_serializers import (
     AdminLoginEnvelopeResponseSerializer,
+    AdminLogoutEnvelopeResponseSerializer,
     AdminUserInfoEnvelopeResponseSerializer,
 )
 from ..serializers.auth_serializer import (
@@ -77,6 +78,27 @@ class AdminTokenRefreshView(TokenRefreshView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return success_response(data=serializer.validated_data, message="Làm mới access token thành công.")
+
+
+class AdminLogoutView(APIView):
+    """
+    Endpoint đăng xuất stateless dành cho quản trị viên.
+    Frontend xóa access/refresh token ở client sau khi gọi thành công.
+    """
+    permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
+
+    @swagger_auto_schema(
+        operation_summary="Admin Logout",
+        operation_description="Ghi audit logout và trả về response thành công. Giai đoạn này chưa revoke refresh token ở server.",
+        responses={
+            200: AdminLogoutEnvelopeResponseSerializer(),
+            **ADMIN_AUTH_ERROR_RESPONSES,
+        },
+        tags=["Admin Auth"],
+    )
+    def post(self, request):
+        AdminAuthService.admin_logout(actor=request.user)
+        return success_response(data=None, message="Đăng xuất quản trị viên thành công.")
 
 
 class AdminMeView(APIView):

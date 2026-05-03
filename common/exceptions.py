@@ -103,6 +103,14 @@ def _stringify_error_detail(detail):
 
 
 def _extract_exception_code(exc, fallback: ResponseCode) -> ResponseCode | str:
+    from rest_framework.exceptions import NotAuthenticated, PermissionDenied
+
+    if isinstance(exc, NotAuthenticated):
+        return ResponseCode.UNAUTHORIZED
+
+    if isinstance(exc, PermissionDenied):
+        return ResponseCode.FORBIDDEN
+
     code = getattr(exc, "code", None)
     if code:
         return code

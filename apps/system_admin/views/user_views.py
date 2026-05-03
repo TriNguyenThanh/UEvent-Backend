@@ -5,18 +5,20 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_yasg.utils import swagger_auto_schema
 
-from common.responses import deleted_response, success_response
+from common.responses import created_response, deleted_response, success_response
 from ..pagination import AdminStandardPagination
 from ..permissions import IsAdminOrSuperUser
 from ..services.user_services import AdminUserService
 from ..serializers.common_serializers import AdminErrorResponseSerializer
 from ..serializers.response_serializers import (
     AdminUserEnvelopeResponseSerializer,
+    AdminUserListEnvelopeResponseSerializer,
     AdminUserStatisticsEnvelopeResponseSerializer,
 )
 from ..serializers.user_serializers import (
     AdminUserListOutputSerializer,
     AdminUserDetailOutputSerializer,
+    AdminCreateUserInputSerializer,
     AdminUpdateUserInputSerializer,
     AdminBanUserInputSerializer,
     AdminUnbanUserInputSerializer,
@@ -35,7 +37,7 @@ ADMIN_USER_ERROR_RESPONSES = {
 
 class AdminUserListView(generics.ListAPIView):
     """
-    Danh sách user với advanced filtering, searching, và sorting.
+    Danh sách user với advanced filtering, searching, sorting và tạo user mới.
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     serializer_class = AdminUserListOutputSerializer
@@ -47,6 +49,39 @@ class AdminUserListView(generics.ListAPIView):
 
     def get_queryset(self):
         return AdminUserService.list_users()
+
+    @swagger_auto_schema(
+        operation_summary="List Admin Users",
+        operation_description="Lấy danh sách user với phân trang, tìm kiếm, lọc và sắp xếp.",
+        responses={200: AdminUserListEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES},
+        tags=["Admin User Management"],
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class AdminUserCreateView(APIView):
+
+    permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
+
+    @swagger_auto_schema(
+        operation_summary="Create Admin User",
+        operation_description="Tạo user mới và gán role theo danh sách role_codes nếu có.",
+        request_body=AdminCreateUserInputSerializer,
+        responses={201: AdminUserEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES},
+        tags=["Admin User Management"],
+    )
+    def post(self, request):
+        serializer = AdminCreateUserInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = AdminUserService.create_user(
+            actor=request.user,
+            data=serializer.to_service_data(),
+        )
+        return created_response(
+            data=AdminUserDetailOutputSerializer(user).data,
+            message="Tạo người dùng thành công.",
+        )
 
 
 class AdminUserDetailUpdateDeleteView(APIView):

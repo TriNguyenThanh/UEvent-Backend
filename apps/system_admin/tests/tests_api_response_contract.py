@@ -144,6 +144,26 @@ class AdminApiResponseContractTests(TestCase):
         )
         self.assertEqual(response.data["data"]["username"], self.admin_user.username)
 
+    def test_admin_logout_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.post(reverse("system_admin:admin-logout"), {}, format="json")
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Đăng xuất quản trị viên thành công.",
+        )
+        self.assertIsNone(response.data["data"])
+
+    def test_admin_logout_unauthenticated_uses_shared_response_envelope(self):
+        response = self.client.post(reverse("system_admin:admin-logout"), {}, format="json")
+
+        self.assert_error_envelope(
+            response,
+            expected_status=401,
+            expected_code=ResponseCode.UNAUTHORIZED.value,
+        )
+
     def test_admin_user_list_success_uses_paginated_response_envelope(self):
         self.authenticate_admin()
 
@@ -159,6 +179,96 @@ class AdminApiResponseContractTests(TestCase):
         self.assertIn("page", response.data["meta"]["pagination"])
         self.assertIn("page_size", response.data["meta"]["pagination"])
         self.assertIn("total_pages", response.data["meta"]["pagination"])
+
+    def test_admin_create_user_success_uses_created_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.post(
+            reverse("system_admin:user-list"),
+            {
+                "username": "created_contract",
+                "email": "created_contract@example.com",
+                "password": "CreatedPass123!",
+                "full_name": "Created Contract",
+                "student_code": "SC_CREATED_001",
+                "phone_number": "0900000001",
+                "faculty": "Engineering",
+                "class_name": "ENG01",
+                "role_codes": [self.role.code],
+            },
+            format="json",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_status=201,
+            expected_code=ResponseCode.CREATED.value,
+            expected_message="Tạo người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["username"], "created_contract")
+        self.assertEqual(response.data["data"]["email"], "created_contract@example.com")
+        self.assertEqual(response.data["data"]["student_code"], "SC_CREATED_001")
+        self.assertEqual(response.data["data"]["user_roles"][0]["role"]["code"], self.role.code)
+
+    def test_admin_create_user_duplicate_username_uses_error_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.post(
+            reverse("system_admin:user-list"),
+            {
+                "username": self.target_user.username,
+                "email": "duplicate_username@example.com",
+                "password": "CreatedPass123!",
+            },
+            format="json",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=400,
+            expected_code=ResponseCode.API_ERROR.value,
+        )
+        self.assertIn("username", response.data["errors"])
+
+    def test_admin_create_user_invalid_role_uses_error_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.post(
+            reverse("system_admin:user-list"),
+            {
+                "username": "invalid_role_contract",
+                "email": "invalid_role_contract@example.com",
+                "password": "CreatedPass123!",
+                "role_codes": ["missing_contract_role"],
+            },
+            format="json",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=404,
+            expected_code=ResponseCode.NOT_FOUND.value,
+        )
+
+    def test_admin_create_user_non_admin_uses_error_envelope(self):
+        self.client.force_authenticate(user=self.target_user)
+
+        response = self.client.post(
+            reverse("system_admin:user-list"),
+            {
+                "username": "forbidden_created_contract",
+                "email": "forbidden_created_contract@example.com",
+                "password": "CreatedPass123!",
+            },
+            format="json",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=403,
+            expected_code=ResponseCode.FORBIDDEN.value,
+        )
 
     def test_admin_user_detail_success_uses_shared_response_envelope(self):
         self.authenticate_admin()
@@ -262,6 +372,73 @@ class AdminApiResponseContractTests(TestCase):
             data_type=dict,
         )
         self.assertEqual(response.data["data"]["username"], restorable_user.username)
+
+    def test_admin_assign_role_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+        role = Role.objects.create(
+            code="assign_contract_role",
+            name="Assign Contract Role",
+            description="Role dùng cho test gán role.",
+        )
+
+        response = self.client.post(
+            reverse("system_admin:user-roles", kwargs={"pk": self.target_user.pk}),
+            {"role_code": role.code},
+            format="json",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Gán vai trò người dùng thành công.",
+            data_type=dict,
+        )
+        role_codes = [item["role"]["code"] for item in response.data["data"]["user_roles"]]
+        self.assertIn(role.code, role_codes)
+
+    def test_admin_remove_role_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+        removable_role = Role.objects.create(
+            code="remove_contract_role",
+            name="Remove Contract Role",
+            description="Role dùng cho test gỡ role.",
+        )
+        UserRole.objects.create(
+            user=self.target_user,
+            role=removable_role,
+            assigned_by=self.admin_user,
+            is_primary=False,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "system_admin:user-role-remove",
+                kwargs={"pk": self.target_user.pk, "role_code": removable_role.code},
+            ),
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Gỡ vai trò người dùng thành công.",
+            data_type=dict,
+        )
+        role_codes = [item["role"]["code"] for item in response.data["data"]["user_roles"]]
+        self.assertNotIn(removable_role.code, role_codes)
+
+    def test_admin_remove_primary_role_uses_error_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.delete(
+            reverse(
+                "system_admin:user-role-remove",
+                kwargs={"pk": self.target_user.pk, "role_code": self.role.code},
+            ),
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=400,
+            expected_code=ResponseCode.VALIDATION_ERROR.value,
+        )
 
     def test_admin_user_statistics_success_uses_shared_response_envelope(self):
         self.authenticate_admin()

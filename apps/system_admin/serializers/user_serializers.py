@@ -1,3 +1,5 @@
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from apps.users.models import User, Role, UserRole, UserSession
 
@@ -47,6 +49,53 @@ class AdminUserDetailOutputSerializer(serializers.ModelSerializer):
             'phone_number', 'avatar_url', 'deleted_at',
             'created_at', 'updated_at', 'user_roles', 'sessions'
         ]
+
+class AdminCreateUserInputSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        required=True,
+        write_only=True,
+        style={'input_type': 'password'},
+        help_text="Mật khẩu tạm cho user mới.",
+    )
+    role_codes = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        write_only=True,
+        help_text="Danh sách mã role cần gán cho user mới.",
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            'username', 'email', 'password', 'full_name', 'student_code',
+            'phone_number', 'faculty', 'class_name', 'role_codes',
+        ]
+
+    def validate_username(self, value):
+        if User.all_objects.filter(username=value).exists():
+            raise serializers.ValidationError("Tên đăng nhập đã tồn tại.")
+        return value
+
+    def validate_email(self, value):
+        if User.all_objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email đã tồn tại.")
+        return value
+
+    def validate_student_code(self, value):
+        if value and User.all_objects.filter(student_code=value).exists():
+            raise serializers.ValidationError("Mã sinh viên đã tồn tại.")
+        return value
+
+    def validate(self, attrs):
+        try:
+            validate_password(attrs["password"])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)}) from exc
+        return attrs
+
+    def to_service_data(self):
+        return dict(self.validated_data)
+
 
 class AdminUpdateUserInputSerializer(serializers.ModelSerializer):
     role_codes = serializers.ListField(
