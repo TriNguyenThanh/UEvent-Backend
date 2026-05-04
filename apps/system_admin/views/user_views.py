@@ -1,28 +1,34 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
+from common.response_codes import ResponseCode
 from common.responses import created_response, deleted_response, success_response
 from ..pagination import AdminStandardPagination
 from ..permissions import IsAdminOrSuperUser
+from ..services.user_export_service import AdminUserExportService
 from ..services.user_services import AdminUserService
 from ..serializers.common_serializers import AdminErrorResponseSerializer
 from ..serializers.response_serializers import (
+    AdminExportJobEnvelopeResponseSerializer,
     AdminUserEnvelopeResponseSerializer,
     AdminUserListEnvelopeResponseSerializer,
     AdminUserStatisticsEnvelopeResponseSerializer,
 )
 from ..serializers.user_serializers import (
-    AdminUserListOutputSerializer,
-    AdminUserDetailOutputSerializer,
-    AdminCreateUserInputSerializer,
-    AdminUpdateUserInputSerializer,
-    AdminBanUserInputSerializer,
-    AdminUnbanUserInputSerializer,
     AdminAssignRoleInputSerializer,
+    AdminBanUserInputSerializer,
+    AdminCreateUserInputSerializer,
+    AdminExportJobOutputSerializer,
+    AdminUnbanUserInputSerializer,
+    AdminUpdateUserInputSerializer,
+    AdminUserDetailOutputSerializer,
+    AdminUserExportRequestSerializer,
+    AdminUserListOutputSerializer,
     UserStatisticsOutputSerializer,
 )
 
@@ -37,7 +43,7 @@ ADMIN_USER_ERROR_RESPONSES = {
 
 class AdminUserListView(generics.ListAPIView):
     """
-    Danh sách user với advanced filtering, searching, sorting và tạo user mới.
+    Danh sách user với advanced filtering, searching, sorting.
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     serializer_class = AdminUserListOutputSerializer
@@ -58,8 +64,8 @@ class AdminUserListView(generics.ListAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
-
-
+    
+    
 class AdminUserCreateView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
@@ -224,6 +230,63 @@ class AdminRemoveRoleView(APIView):
         return success_response(
             data=AdminUserDetailOutputSerializer(user).data,
             message="Gỡ vai trò người dùng thành công.",
+        )
+
+
+class AdminUserExportCreateView(APIView):
+    """Tạo async job export danh sách user."""
+
+    permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
+
+    @swagger_auto_schema(
+        operation_summary="Create User Export Job",
+        operation_description="Tạo job export user async. Header Idempotency-Key là bắt buộc.",
+        manual_parameters=[
+            openapi.Parameter(
+                "Idempotency-Key",
+                openapi.IN_HEADER,
+                description="Khóa chống tạo trùng job export.",
+                type=openapi.TYPE_STRING,
+                required=True,
+            ),
+        ],
+        request_body=AdminUserExportRequestSerializer,
+        responses={202: AdminExportJobEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES},
+        tags=["Admin User Management"],
+    )
+    def post(self, request):
+        serializer = AdminUserExportRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        job, created = AdminUserExportService.create_user_export_job(
+            actor=request.user,
+            idempotency_key=request.headers.get("Idempotency-Key"),
+            data=serializer.to_service_data(),
+        )
+        message = "Tạo job export người dùng thành công." if created else "Job export người dùng đã tồn tại."
+        return success_response(
+            data=AdminExportJobOutputSerializer(job).data,
+            code=ResponseCode.ACCEPTED,
+            message=message,
+            status_code=status.HTTP_202_ACCEPTED,
+        )
+
+
+class AdminExportJobDetailView(APIView):
+    """Lấy trạng thái async export job."""
+
+    permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
+
+    @swagger_auto_schema(
+        operation_summary="Get Export Job Status",
+        operation_description="Lấy trạng thái job export theo job_id.",
+        responses={200: AdminExportJobEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES},
+        tags=["Admin User Management"],
+    )
+    def get(self, request, job_id):
+        job = AdminUserExportService.get_export_job(actor=request.user, job_id=job_id)
+        return success_response(
+            data=AdminExportJobOutputSerializer(job).data,
+            message="Lấy trạng thái job export thành công.",
         )
 
 

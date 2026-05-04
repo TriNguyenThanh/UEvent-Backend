@@ -1,7 +1,11 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
+
+from apps.system_admin.models import ExportJob
 from apps.users.models import User, Role, UserRole, UserSession
+from apps.system_admin.services.user_export_service import AdminUserExportService
+
 
 class AdminRoleOutputSerializer(serializers.ModelSerializer):
     class Meta:
@@ -129,6 +133,90 @@ class AdminAssignRoleInputSerializer(serializers.Serializer):
 
     def to_service_data(self):
         return {"role_code": self.validated_data["role_code"]}
+
+
+class AdminUserExportRequestSerializer(serializers.Serializer):
+    format = serializers.ChoiceField(
+        choices=ExportJob.ExportFormat.choices,
+        required=False,
+        default=ExportJob.ExportFormat.CSV,
+        help_text="Định dạng file export.",
+    )
+    filters = serializers.DictField(
+        child=serializers.JSONField(),
+        required=False,
+        default=dict,
+        help_text="Bộ lọc export user: account_status, faculty, is_active, search.",
+    )
+    fields = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        allow_empty=False,
+        help_text="Danh sách field cần export.",
+    )
+
+    def validate_filters(self, value):
+        unsupported = sorted(set(value.keys()) - AdminUserExportService.ALLOWED_FILTERS)
+        if unsupported:
+            raise serializers.ValidationError(f"Bộ lọc không được hỗ trợ: {', '.join(unsupported)}.")
+        return value
+
+    def validate_fields(self, value):
+        deduped_fields = list(dict.fromkeys(value))
+        unsupported = sorted(set(deduped_fields) - AdminUserExportService.ALLOWED_FIELDS)
+        if unsupported:
+            raise serializers.ValidationError(f"Field export không được hỗ trợ: {', '.join(unsupported)}.")
+        return deduped_fields
+
+    def validate(self, attrs):
+        filters = attrs.get("filters") or {}
+        account_status = filters.get("account_status")
+        if account_status and account_status not in User.AccountStatus.values:
+            raise serializers.ValidationError({"filters": {"account_status": "Trạng thái tài khoản không hợp lệ."}})
+
+        if "is_active" in filters and not isinstance(filters["is_active"], bool):
+            raise serializers.ValidationError({"filters": {"is_active": "Giá trị is_active phải là boolean."}})
+
+        return attrs
+
+    def to_service_data(self):
+        return dict(self.validated_data)
+
+
+class AdminExportJobOutputSerializer(serializers.ModelSerializer):
+    job_id = serializers.UUIDField(source="id", read_only=True)
+    eta_seconds = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ExportJob
+        fields = [
+            "job_id",
+            "export_type",
+            "format",
+            "status",
+            "progress",
+            "retry_count",
+            "error_code",
+            "error_message",
+            "file_key",
+            "download_url",
+            "file_size_bytes",
+            "checksum_sha256",
+            "rows_count",
+            "eta_seconds",
+            "expires_at",
+            "started_at",
+            "completed_at",
+            "created_at",
+            "updated_at",
+        ]
+
+    format = serializers.CharField(source="export_format", read_only=True)
+
+    def get_eta_seconds(self, obj):
+        if obj.status in {ExportJob.Status.COMPLETED, ExportJob.Status.FAILED, ExportJob.Status.EXPIRED}:
+            return 0
+        return 60
 
 
 # ── Statistics Serializers ───────────────────────────────────────────

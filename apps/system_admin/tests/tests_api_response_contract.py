@@ -4,6 +4,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.system_admin.models import ExportJob
 from apps.users.models import Role, UserRole
 from common.response_codes import ResponseCode
 from common.responses import build_api_response
@@ -184,7 +185,7 @@ class AdminApiResponseContractTests(TestCase):
         self.authenticate_admin()
 
         response = self.client.post(
-            reverse("system_admin:user-list"),
+            reverse("system_admin:user-create"),
             {
                 "username": "created_contract",
                 "email": "created_contract@example.com",
@@ -215,7 +216,7 @@ class AdminApiResponseContractTests(TestCase):
         self.authenticate_admin()
 
         response = self.client.post(
-            reverse("system_admin:user-list"),
+            reverse("system_admin:user-create"),
             {
                 "username": self.target_user.username,
                 "email": "duplicate_username@example.com",
@@ -235,7 +236,7 @@ class AdminApiResponseContractTests(TestCase):
         self.authenticate_admin()
 
         response = self.client.post(
-            reverse("system_admin:user-list"),
+            reverse("system_admin:user-create"),
             {
                 "username": "invalid_role_contract",
                 "email": "invalid_role_contract@example.com",
@@ -255,7 +256,7 @@ class AdminApiResponseContractTests(TestCase):
         self.client.force_authenticate(user=self.target_user)
 
         response = self.client.post(
-            reverse("system_admin:user-list"),
+            reverse("system_admin:user-create"),
             {
                 "username": "forbidden_created_contract",
                 "email": "forbidden_created_contract@example.com",
@@ -438,6 +439,166 @@ class AdminApiResponseContractTests(TestCase):
             response,
             expected_status=400,
             expected_code=ResponseCode.VALIDATION_ERROR.value,
+        )
+
+    def test_admin_user_export_create_success_uses_accepted_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.post(
+            reverse("system_admin:user-export"),
+            {
+                "format": "csv",
+                "filters": {"account_status": "active"},
+                "fields": ["id", "username", "email", "account_status"],
+            },
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="export-contract-key-1",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_status=202,
+            expected_code=ResponseCode.ACCEPTED.value,
+            expected_message="Tạo job export người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["status"], ExportJob.Status.PENDING)
+        self.assertEqual(response.data["data"]["format"], ExportJob.ExportFormat.CSV)
+        self.assertIn("job_id", response.data["data"])
+        self.assertTrue(
+            ExportJob.objects.filter(
+                actor=self.admin_user,
+                idempotency_key="export-contract-key-1",
+            ).exists()
+        )
+
+    def test_admin_user_export_reuses_idempotency_key(self):
+        self.authenticate_admin()
+        payload = {"format": "csv", "filters": {"faculty": "Engineering"}}
+
+        first_response = self.client.post(
+            reverse("system_admin:user-export"),
+            payload,
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="export-contract-key-2",
+        )
+        second_response = self.client.post(
+            reverse("system_admin:user-export"),
+            payload,
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="export-contract-key-2",
+        )
+
+        self.assert_success_envelope(
+            second_response,
+            expected_status=202,
+            expected_code=ResponseCode.ACCEPTED.value,
+            expected_message="Job export người dùng đã tồn tại.",
+            data_type=dict,
+        )
+        self.assertEqual(first_response.data["data"]["job_id"], second_response.data["data"]["job_id"])
+        self.assertEqual(ExportJob.objects.filter(idempotency_key="export-contract-key-2").count(), 1)
+
+    def test_admin_user_export_conflicting_idempotency_key_uses_error_envelope(self):
+        self.authenticate_admin()
+
+        self.client.post(
+            reverse("system_admin:user-export"),
+            {"format": "csv", "filters": {"faculty": "Engineering"}},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="export-contract-key-3",
+        )
+        response = self.client.post(
+            reverse("system_admin:user-export"),
+            {"format": "csv", "filters": {"faculty": "Business"}},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="export-contract-key-3",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=409,
+            expected_code=ResponseCode.CONFLICT.value,
+        )
+
+    def test_admin_user_export_missing_idempotency_key_uses_error_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.post(
+            reverse("system_admin:user-export"),
+            {"format": "csv"},
+            format="json",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=400,
+            expected_code=ResponseCode.VALIDATION_ERROR.value,
+        )
+
+    def test_admin_user_export_invalid_filter_uses_error_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.post(
+            reverse("system_admin:user-export"),
+            {"filters": {"password": "secret"}},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="export-contract-key-4",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=400,
+            expected_code=ResponseCode.API_ERROR.value,
+        )
+        self.assertIn("filters", response.data["errors"])
+
+    def test_admin_export_job_detail_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+        create_response = self.client.post(
+            reverse("system_admin:user-export"),
+            {"format": "csv"},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="export-contract-key-5",
+        )
+        job_id = create_response.data["data"]["job_id"]
+
+        response = self.client.get(reverse("system_admin:export-job-detail", kwargs={"job_id": job_id}))
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Lấy trạng thái job export thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["job_id"], job_id)
+
+    def test_admin_export_job_detail_not_found_uses_error_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.get(
+            reverse("system_admin:export-job-detail", kwargs={"job_id": "00000000-0000-0000-0000-000000000000"})
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=404,
+            expected_code=ResponseCode.NOT_FOUND.value,
+        )
+
+    def test_admin_user_export_non_admin_uses_error_envelope(self):
+        self.client.force_authenticate(user=self.target_user)
+
+        response = self.client.post(
+            reverse("system_admin:user-export"),
+            {"format": "csv"},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="export-contract-key-6",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=403,
+            expected_code=ResponseCode.FORBIDDEN.value,
         )
 
     def test_admin_user_statistics_success_uses_shared_response_envelope(self):

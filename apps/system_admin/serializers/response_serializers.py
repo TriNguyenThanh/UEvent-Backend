@@ -23,3 +23,7 @@ class AdminUserListEnvelopeResponseSerializer(PaginatedApiResponseSerializer):
 
 class AdminUserStatisticsEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
     """Envelope response cho admin user statistics."""
+
+
+class AdminExportJobEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin export job."""
