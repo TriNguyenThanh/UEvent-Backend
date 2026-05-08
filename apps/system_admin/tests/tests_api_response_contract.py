@@ -1,0 +1,277 @@
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.users.models import Role, UserRole
+from common.response_codes import ResponseCode
+from common.responses import build_api_response
+
+
+class AdminApiResponseContractTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        user_model = get_user_model()
+        cls.admin_password = "AdminPass123!"
+        cls.admin_user = user_model.objects.create_user(
+            username="admin_contrac",
+            email="admin_contract@example.com",
+            password=cls.admin_password,
+            full_name="Admin Contract",
+            is_staff=True,
+            is_superuser=True,
+        )
+        cls.target_user = user_model.objects.create_user(
+            username="target_contract",
+            email="target_contract@example.com",
+            password="TargetPass123!",
+            full_name="Target Contract",
+            is_staff=False,
+            is_superuser=False,
+        )
+        cls.role = Role.objects.create(
+            code="contract_role",
+            name="Contract Role",
+            description="Role dùng cho test API response contract.",
+        )
+        UserRole.objects.create(
+            user=cls.target_user,
+            role=cls.role,
+            assigned_by=cls.admin_user,
+            is_primary=True,
+        )
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def authenticate_admin(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+    def assert_success_envelope(
+        self,
+        response,
+        *,
+        expected_status=200,
+        expected_code=ResponseCode.SUCCESS.value,
+        expected_message=None,
+        data_type=None,
+    ):
+        self.assertEqual(response.status_code, expected_status)
+        self.assertEqual(set(response.data.keys()), {"success", "code", "message", "data", "errors", "meta"})
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["code"], expected_code)
+        if expected_message is not None:
+            self.assertEqual(response.data["message"], expected_message)
+        self.assertIsNone(response.data["errors"])
+        self.assertIsInstance(response.data["meta"], dict)
+        if data_type is not None:
+            self.assertIsInstance(response.data["data"], data_type)
+
+    def assert_error_envelope(self, response, *, expected_status, expected_code=None):
+        self.assertEqual(response.status_code, expected_status)
+        self.assertEqual(set(response.data.keys()), {"success", "code", "message", "data", "errors", "meta"})
+        self.assertFalse(response.data["success"])
+        if expected_code is not None:
+            self.assertEqual(response.data["code"], expected_code)
+        self.assertIsNone(response.data["data"])
+        self.assertIn("message", response.data)
+        self.assertIsInstance(response.data["meta"], dict)
+
+    def test_admin_envelope_uses_response_code_enum_value(self):
+        response = build_api_response(
+            success=False,
+            code=ResponseCode.INVALID_AUDIT_FILTER,
+            errors={"filter": ["Unsupported filter."]},
+        )
+
+        self.assertFalse(response["success"])
+        self.assertEqual(response["code"], "invalid_audit_filter")
+        self.assertIsNone(response["data"])
+        self.assertEqual(response["errors"], {"filter": ["Unsupported filter."]})
+
+    def test_admin_login_success_uses_shared_response_envelope(self):
+        response = self.client.post(
+            reverse("system_admin:admin-login"),
+            {"username": self.admin_user.username, "password": self.admin_password},
+            format="json",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Đăng nhập quản trị viên thành công.",
+            data_type=dict,
+        )
+        self.assertIn("access", response.data["data"])
+        self.assertIn("refresh", response.data["data"])
+        self.assertIn("user", response.data["data"])
+
+    def test_admin_login_validation_error_uses_shared_response_envelope(self):
+        response = self.client.post(reverse("system_admin:admin-login"), {}, format="json")
+
+        self.assert_error_envelope(
+            response,
+            expected_status=400,
+            expected_code=ResponseCode.API_ERROR.value,
+        )
+        self.assertIsInstance(response.data["errors"], dict)
+
+    def test_admin_token_refresh_success_uses_shared_response_envelope(self):
+        refresh = RefreshToken.for_user(self.admin_user)
+
+        response = self.client.post(
+            reverse("system_admin:admin-token-refresh"),
+            {"refresh": str(refresh)},
+            format="json",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Làm mới access token thành công.",
+            data_type=dict,
+        )
+        self.assertIn("access", response.data["data"])
+
+    def test_admin_me_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.get(reverse("system_admin:admin-me"))
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Lấy thông tin quản trị viên thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["username"], self.admin_user.username)
+
+    def test_admin_user_list_success_uses_paginated_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.get(reverse("system_admin:user-list"))
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Lấy danh sách dữ liệu thành công.",
+            data_type=list,
+        )
+        self.assertIn("pagination", response.data["meta"])
+        self.assertIn("count", response.data["meta"]["pagination"])
+        self.assertIn("page", response.data["meta"]["pagination"])
+        self.assertIn("page_size", response.data["meta"]["pagination"])
+        self.assertIn("total_pages", response.data["meta"]["pagination"])
+
+    def test_admin_user_detail_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.get(reverse("system_admin:user-detail", kwargs={"pk": self.target_user.pk}))
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Lấy thông tin người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["username"], self.target_user.username)
+
+    def test_admin_user_patch_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.patch(
+            reverse("system_admin:user-detail", kwargs={"pk": self.target_user.pk}),
+            {"full_name": "Target Contract Updated"},
+            format="json",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Cập nhật người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["full_name"], "Target Contract Updated")
+
+    def test_admin_user_delete_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+        user_model = get_user_model()
+        deletable_user = user_model.objects.create_user(
+            username="deletable_contract",
+            email="deletable_contract@example.com",
+            password="DeletePass123!",
+        )
+
+        response = self.client.delete(
+            reverse("system_admin:user-detail", kwargs={"pk": deletable_user.pk}),
+            {"reason": "Test contract envelope."},
+            format="json",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_code=ResponseCode.DELETED.value,
+            expected_message="Xóa mềm người dùng thành công.",
+        )
+        self.assertIsNone(response.data["data"])
+
+    def test_admin_ban_user_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.post(
+            reverse("system_admin:user-ban", kwargs={"pk": self.target_user.pk}),
+            {"reason": "Test ban envelope."},
+            format="json",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Khóa người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["account_status"], "banned")
+
+    def test_admin_unban_user_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+        self.target_user.account_status = "banned"
+        self.target_user.save(update_fields=["account_status", "updated_at"])
+
+        response = self.client.post(
+            reverse("system_admin:user-unban", kwargs={"pk": self.target_user.pk}),
+            {"reason": "Test unban envelope."},
+            format="json",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Mở khóa người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["account_status"], "active")
+
+    def test_admin_restore_user_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+        user_model = get_user_model()
+        restorable_user = user_model.objects.create_user(
+            username="restorable_contract",
+            email="restorable_contract@example.com",
+            password="RestorePass123!",
+        )
+        restorable_user.delete()
+
+        response = self.client.post(reverse("system_admin:user-restore", kwargs={"pk": restorable_user.pk}))
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Khôi phục người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["username"], restorable_user.username)
+
+    def test_admin_user_statistics_success_uses_shared_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.get(reverse("system_admin:user-statistics"))
+
+        self.assert_success_envelope(
+            response,
+            expected_message="Lấy thống kê người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertIn("total_users", response.data["data"])
+        self.assertIn("by_status", response.data["data"])

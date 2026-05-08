@@ -1,10 +1,9 @@
-import logging
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from common.exceptions import UnauthorizedError, ForbiddenError
-
-audit_logger = logging.getLogger("uevent.audit")
+from common.response_codes import ResponseCode
+from .audit_service import AdminAuditService
 
 
 class AdminAuthService:
@@ -24,25 +23,21 @@ class AdminAuthService:
         user = authenticate(username=username, password=password)
 
         if user is None:
-            raise UnauthorizedError(code='invalid_credentials', detail="Thông tin đăng nhập không hợp lệ.")
+            raise UnauthorizedError(code=ResponseCode.INVALID_CREDENTIALS, detail="Thông tin đăng nhập không hợp lệ.")
 
         if not user.is_active:
-            raise UnauthorizedError(code='account_disabled', detail="Tài khoản đã bị vô hiệu hóa.")
+            raise UnauthorizedError(code=ResponseCode.ACCOUNT_DISABLED, detail="Tài khoản đã bị vô hiệu hóa.")
 
         if not (user.is_staff or user.is_superuser):
-            raise ForbiddenError(code='insufficient_permissions', detail="Chỉ quản trị viên mới có quyền truy cập.")
+            raise ForbiddenError(code=ResponseCode.INSUFFICIENT_PERMISSIONS, detail="Chỉ quản trị viên mới có quyền truy cập.")
 
         refresh = RefreshToken.for_user(user)
 
-        audit_logger.info(
-            "Admin login success",
-            extra={
-                "action_type": "admin_login",
-                "actor_id": str(user.pk),
-                "target_type": "users.User",
-                "target_id": str(user.pk),
-                "system_module": "system_admin",
-            },
+        AdminAuditService.log_action(
+            action="admin_login",
+            actor=user,
+            target_type="users.User",
+            target_id=str(user.pk),
         )
 
         return {

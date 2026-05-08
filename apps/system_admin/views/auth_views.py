@@ -1,18 +1,29 @@
-from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from drf_yasg.utils import swagger_auto_schema
 
+from common.responses import success_response
 from ..permissions import IsAdminOrSuperUser
+from ..serializers.common_serializers import AdminErrorResponseSerializer
+from ..serializers.response_serializers import (
+    AdminLoginEnvelopeResponseSerializer,
+    AdminUserInfoEnvelopeResponseSerializer,
+)
 from ..serializers.auth_serializer import (
     AdminLoginInputSerializer,
     AdminLoginOutputSerializer,
     AdminUserInfoOutputSerializer,
 )
 from ..services.auth_service import AdminAuthService
+
+
+ADMIN_AUTH_ERROR_RESPONSES = {
+    400: AdminErrorResponseSerializer(),
+    401: AdminErrorResponseSerializer(),
+    403: AdminErrorResponseSerializer(),
+}
 
 
 class AdminLoginView(APIView):
@@ -28,9 +39,8 @@ class AdminLoginView(APIView):
         operation_description="Xác thực quản trị viên bằng username/password, trả về JWT tokens.",
         request_body=AdminLoginInputSerializer,
         responses={
-            200: AdminLoginOutputSerializer(),
-            401: "Thông tin đăng nhập không hợp lệ.",
-            403: "Không có quyền truy cập (không phải admin).",
+            200: AdminLoginEnvelopeResponseSerializer(),
+            **ADMIN_AUTH_ERROR_RESPONSES,
         },
         tags=["Admin Auth"],
     )
@@ -44,7 +54,7 @@ class AdminLoginView(APIView):
         )
 
         output = AdminLoginOutputSerializer(result)
-        return Response(output.data, status=status.HTTP_200_OK)
+        return success_response(data=output.data, message="Đăng nhập quản trị viên thành công.")
 
 
 class AdminTokenRefreshView(TokenRefreshView):
@@ -57,10 +67,16 @@ class AdminTokenRefreshView(TokenRefreshView):
         operation_summary="Admin Token Refresh",
         operation_description="Gửi refresh token để nhận access token mới.",
         request_body=TokenRefreshSerializer,
+        responses={
+            200: AdminLoginEnvelopeResponseSerializer(),
+            **ADMIN_AUTH_ERROR_RESPONSES,
+        },
         tags=["Admin Auth"],
     )
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return success_response(data=serializer.validated_data, message="Làm mới access token thành công.")
 
 
 class AdminMeView(APIView):
@@ -75,9 +91,8 @@ class AdminMeView(APIView):
         operation_summary="Get Current Admin Info",
         operation_description="Xác thực JWT token trong header và trả về thông tin quản trị viên hiện tại.",
         responses={
-            200: AdminUserInfoOutputSerializer(),
-            401: "Token không hợp lệ hoặc đã hết hạn.",
-            403: "Không có quyền admin.",
+            200: AdminUserInfoEnvelopeResponseSerializer(),
+            **ADMIN_AUTH_ERROR_RESPONSES,
         },
         tags=["Admin Auth"],
     )
@@ -91,5 +106,5 @@ class AdminMeView(APIView):
             "avatar_url": user.avatar_url,
             "is_superuser": user.is_superuser,
         }).data
-        return Response(data, status=status.HTTP_200_OK)
+        return success_response(data=data, message="Lấy thông tin quản trị viên thành công.")
 

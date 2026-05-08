@@ -1,12 +1,10 @@
-import logging
 from django.db import transaction
 from django.db.models import Count, QuerySet
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from apps.users.models import User, Role, UserRole
 from common.exceptions import NotFoundError, ValidationError
-
-audit_logger = logging.getLogger("uevent.audit")
+from .audit_service import AdminAuditService
 
 
 class AdminUserService:
@@ -89,17 +87,13 @@ class AdminUserService:
 
     @staticmethod
     def _log_audit(*, action, actor, target_user_id, reason="", metadata=None):
-        audit_logger.info(
-            f"Admin action: {action}",
-            extra={
-                "action_type": action,
-                "actor_id": str(getattr(actor, 'pk', '')),
-                "target_type": "users.User",
-                "target_id": str(target_user_id),
-                "reason": reason,
-                "system_module": "system_admin",
-                **(metadata or {}),
-            },
+        AdminAuditService.log_action(
+            action=action,
+            actor=actor,
+            target_type="users.User",
+            target_id=str(target_user_id),
+            reason=reason,
+            metadata=metadata,
         )
 
     @staticmethod

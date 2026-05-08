@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'common.middleware.RequestIdMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -131,6 +132,10 @@ SWAGGER_SETTINGS = {
     },
     'USE_SESSION_AUTH': False,
 }
+
+OPENSEARCH_URL = env('OPENSEARCH_URL', default='http://localhost:9200')
+OPENSEARCH_AUDIT_INDEX = env('OPENSEARCH_AUDIT_INDEX', default='uevent-audit-*')
+OPENSEARCH_TIMEOUT_SECONDS = env.int('OPENSEARCH_TIMEOUT_SECONDS', default=5)
 
 
 LOGGING = {

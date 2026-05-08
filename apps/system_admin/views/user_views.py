@@ -1,15 +1,19 @@
-from rest_framework import generics, status
-from rest_framework.response import Response
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_yasg.utils import swagger_auto_schema
 
-from apps.users.models import User
-from common.exceptions import ValidationError, NotFoundError
+from common.responses import deleted_response, success_response
+from ..pagination import AdminStandardPagination
 from ..permissions import IsAdminOrSuperUser
 from ..services.user_services import AdminUserService
+from ..serializers.common_serializers import AdminErrorResponseSerializer
+from ..serializers.response_serializers import (
+    AdminUserEnvelopeResponseSerializer,
+    AdminUserStatisticsEnvelopeResponseSerializer,
+)
 from ..serializers.user_serializers import (
     AdminUserListOutputSerializer,
     AdminUserDetailOutputSerializer,
@@ -20,17 +24,26 @@ from ..serializers.user_serializers import (
     UserStatisticsOutputSerializer,
 )
 
+
+ADMIN_USER_ERROR_RESPONSES = {
+    400: AdminErrorResponseSerializer(),
+    401: AdminErrorResponseSerializer(),
+    403: AdminErrorResponseSerializer(),
+    404: AdminErrorResponseSerializer(),
+}
+
+
 class AdminUserListView(generics.ListAPIView):
     """
     Danh sách user với advanced filtering, searching, và sorting.
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     serializer_class = AdminUserListOutputSerializer
+    pagination_class = AdminStandardPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['username', 'email', 'full_name', 'student_code']
     filterset_fields = ['account_status', 'faculty', 'is_active']
     ordering_fields = ['created_at', 'username', 'email']
-
 
     def get_queryset(self):
         return AdminUserService.list_users()
@@ -42,15 +55,15 @@ class AdminUserDetailUpdateDeleteView(APIView):
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
 
-    @swagger_auto_schema(responses={200: AdminUserDetailOutputSerializer()})
+    @swagger_auto_schema(responses={200: AdminUserEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES})
     def get(self, request, pk):
         user = AdminUserService.get_user(pk)
         data = AdminUserDetailOutputSerializer(user).data
-        return Response(data, status=status.HTTP_200_OK)
+        return success_response(data=data, message="Lấy thông tin người dùng thành công.")
 
     @swagger_auto_schema(
         request_body=AdminUpdateUserInputSerializer,
-        responses={200: AdminUserDetailOutputSerializer()}
+        responses={200: AdminUserEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES}
     )
     def patch(self, request, pk):
         user = AdminUserService.get_user(pk)
@@ -61,7 +74,10 @@ class AdminUserDetailUpdateDeleteView(APIView):
             user_id=pk,
             data=serializer.to_service_data()
         )
-        return Response(AdminUserDetailOutputSerializer(user).data)
+        return success_response(
+            data=AdminUserDetailOutputSerializer(user).data,
+            message="Cập nhật người dùng thành công.",
+        )
 
     def delete(self, request, pk):
         AdminUserService.soft_delete_user(
@@ -69,7 +85,7 @@ class AdminUserDetailUpdateDeleteView(APIView):
             target_user_id=pk,
             reason=request.data.get('reason', '')
         )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return deleted_response(message="Xóa mềm người dùng thành công.")
 
 
 class AdminBanUserView(APIView):
@@ -79,7 +95,7 @@ class AdminBanUserView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     @swagger_auto_schema(
         request_body=AdminBanUserInputSerializer,
-        responses={200: AdminUserDetailOutputSerializer()}
+        responses={200: AdminUserEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES}
     )
     def post(self, request, pk):
         serializer = AdminBanUserInputSerializer(data=request.data)
@@ -89,7 +105,10 @@ class AdminBanUserView(APIView):
             target_user_id=pk,
             **serializer.to_service_data()
         )
-        return Response(AdminUserDetailOutputSerializer(user).data)
+        return success_response(
+            data=AdminUserDetailOutputSerializer(user).data,
+            message="Khóa người dùng thành công.",
+        )
 
 
 class AdminUnbanUserView(APIView):
@@ -99,7 +118,7 @@ class AdminUnbanUserView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     @swagger_auto_schema(
         request_body=AdminUnbanUserInputSerializer,
-        responses={200: AdminUserDetailOutputSerializer()}
+        responses={200: AdminUserEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES}
     )
     def post(self, request, pk):
         serializer = AdminUnbanUserInputSerializer(data=request.data)
@@ -109,7 +128,10 @@ class AdminUnbanUserView(APIView):
             target_user_id=pk,
             **serializer.to_service_data()
         )
-        return Response(AdminUserDetailOutputSerializer(user).data)
+        return success_response(
+            data=AdminUserDetailOutputSerializer(user).data,
+            message="Mở khóa người dùng thành công.",
+        )
 
 
 class AdminRestoreUserView(APIView):
@@ -117,13 +139,16 @@ class AdminRestoreUserView(APIView):
     Restore a soft-deleted user.
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
-    @swagger_auto_schema(responses={200: AdminUserDetailOutputSerializer()})
+    @swagger_auto_schema(responses={200: AdminUserEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES})
     def post(self, request, pk):
         user = AdminUserService.restore_user(
             actor=request.user,
             target_user_id=pk
         )
-        return Response(AdminUserDetailOutputSerializer(user).data)
+        return success_response(
+            data=AdminUserDetailOutputSerializer(user).data,
+            message="Khôi phục người dùng thành công.",
+        )
 
 
 class AdminAssignRoleView(APIView):
@@ -133,7 +158,7 @@ class AdminAssignRoleView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
     @swagger_auto_schema(
         request_body=AdminAssignRoleInputSerializer,
-        responses={200: AdminUserDetailOutputSerializer()}
+        responses={200: AdminUserEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES}
     )
     def post(self, request, pk):
         serializer = AdminAssignRoleInputSerializer(data=request.data)
@@ -143,7 +168,10 @@ class AdminAssignRoleView(APIView):
             target_user_id=pk,
             **serializer.to_service_data()
         )
-        return Response(AdminUserDetailOutputSerializer(user).data)
+        return success_response(
+            data=AdminUserDetailOutputSerializer(user).data,
+            message="Gán vai trò người dùng thành công.",
+        )
 
 
 class AdminRemoveRoleView(APIView):
@@ -151,14 +179,17 @@ class AdminRemoveRoleView(APIView):
     Remove a role from a user.
     """
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
-    @swagger_auto_schema(responses={200: AdminUserDetailOutputSerializer()})
+    @swagger_auto_schema(responses={200: AdminUserEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES})
     def delete(self, request, pk, role_code):
         user = AdminUserService.remove_role(
             actor=request.user,
             target_user_id=pk,
             role_code=role_code
         )
-        return Response(AdminUserDetailOutputSerializer(user).data)
+        return success_response(
+            data=AdminUserDetailOutputSerializer(user).data,
+            message="Gỡ vai trò người dùng thành công.",
+        )
 
 
 class AdminUserStatisticsView(APIView):
@@ -170,10 +201,10 @@ class AdminUserStatisticsView(APIView):
     @swagger_auto_schema(
         operation_summary="User Statistics",
         operation_description="Thống kê tổng số user, phân bổ theo status/faculty/role, và biểu đồ user mới 30 ngày.",
-        responses={200: UserStatisticsOutputSerializer()},
+        responses={200: AdminUserStatisticsEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES},
         tags=["Admin User Management"],
     )
     def get(self, request):
         data = AdminUserService.get_user_statistics()
         output = UserStatisticsOutputSerializer(data)
-        return Response(output.data, status=status.HTTP_200_OK)
+        return success_response(data=output.data, message="Lấy thống kê người dùng thành công.")
