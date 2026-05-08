@@ -1,0 +1,25 @@
+# Stage 1: Base (shared dependencies)
+FROM python:3.12-slim AS base
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Test (for CI)
+FROM base AS test
+
+COPY . .
+
+CMD ["python", "manage.py", "test"]
+
+# Stage 3: Production (runtime)
+FROM base AS final
+
+COPY . .
+
+CMD ["gunicorn", "core.wsgi:application", "-b", "0.0.0.0:8000"]
+    

@@ -1,0 +1,21 @@
+name: Django CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    if: github.event.action != 'closed' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build CI image
+        run: docker build -f Dockerfile.ci --target test -t uevent-ci .
+      - name: Run tests
+        run: docker run --rm -e CI=true -e USE_SQLITE=true -e SECRET_KEY=ci-secret-key uevent-ci
