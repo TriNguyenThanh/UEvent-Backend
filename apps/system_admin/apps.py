@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 
-class AppSettingsConfig(AppConfig):
+
+class SystemAdminConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.app_settings"
+    name = "apps.system_admin"

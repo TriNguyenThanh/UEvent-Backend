@@ -219,12 +219,13 @@ __marimo__/
 .env.cloud
 Docs/ERD_freeze_checklist.md
 Docs/Relational_DDL_Spec.md
+Docs/Tutorial_System_Admin_Django.md
 
 #**/*migrations*
 /script.py
 #**/**/*migrations*
 */*/migrations/*
-!*/*/migrations/__init__.py
+*/*/migrations/__init__.py
 # Python cache files
 __pycache__/
 */__pycache__/
@@ -243,3 +244,4 @@ __pycache__/
 **/.agents/*
 **/.cursor/*
 .cursorrules
+.gitnexus

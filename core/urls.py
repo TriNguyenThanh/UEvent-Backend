@@ -15,18 +15,16 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from rest_framework import permissions
-
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 
-
 schema_view = get_schema_view(
     openapi.Info(
-        title="UEvents API",
+        title="UEvent Backend API",
         default_version="v1",
-        description="API documentation for UEvents backend",
+        description="API documentation for UEvent Backend",
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
@@ -35,7 +33,9 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/v1/registrations/", include("apps.registrations.urls")),
-    path("api/v1/swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
-    path("api/v1/redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
-    path("api/v1/swagger.json", schema_view.without_ui(cache_timeout=0), name="schema-json"),
+    path('api/v1/admin/', include('apps.system_admin.urls')),
+    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+
 ]
