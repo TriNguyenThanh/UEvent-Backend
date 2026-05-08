@@ -1,28 +1,11 @@
-# apps/registrations/urls.py
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
 from apps.registrations.views import (
-	CheckinScanAPIView,
-	EventCohostCollectionAPIView,
-	EventCohostDetailAPIView,
-	TicketViewSet,
+    RegistrationListCreateView,
+    RegistrationQrAPIView,
 )
 
-router = DefaultRouter()
-router.register("tickets", TicketViewSet, basename="tickets")
-
 urlpatterns = [
-	path("", include(router.urls)),
-	path("checkin/scan/", CheckinScanAPIView.as_view(), name="checkin-scan"),
-	path(
-		"events/<uuid:event_id>/cohosts/",
-		EventCohostCollectionAPIView.as_view(),
-		name="event-cohosts",
-	),
-	path(
-		"events/<uuid:event_id>/cohosts/<uuid:user_id>/",
-		EventCohostDetailAPIView.as_view(),
-		name="event-cohost-detail",
-	),
+    path("", RegistrationListCreateView.as_view(), name="registration-list-create"),
+    path("<uuid:id>/qr/", RegistrationQrAPIView.as_view(), name="registration-qr"),
 ]
