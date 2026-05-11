@@ -10,4 +10,5 @@ opentelemetry-sdk
 opentelemetry-instrumentation-django
 opentelemetry-exporter-otlp
 python-json-logger
+openpyxl
 Deprecated

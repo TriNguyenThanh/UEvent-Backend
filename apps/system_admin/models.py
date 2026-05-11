@@ -19,6 +19,7 @@ class ExportJob(BaseModel):
 
     class ExportFormat(models.TextChoices):
         CSV = "csv", "CSV"
+        XLSX = "xlsx", "Excel XLSX"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

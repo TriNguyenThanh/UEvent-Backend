@@ -6,6 +6,7 @@ import io
 from typing import Any
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.system_admin.models import ExportJob
@@ -13,6 +14,8 @@ from apps.users.models import User
 from common.exceptions import ConflictError, NotFoundError, ValidationError
 
 from .audit_service import AdminAuditService
+from .csv_export_service import AdminCsvExportService
+from .excel_export_service import AdminExcelExportService
 
 
 class AdminUserExportService:
@@ -120,6 +123,45 @@ class AdminUserExportService:
             raise NotFoundError(f"Export job with ID {job_id} does not exist.") from exc
 
     @classmethod
+    def build_user_export_response(cls, *, actor, data: dict[str, Any]):
+        """Tạo CSV/XLSX response đồng bộ theo cùng filters/fields với user list/export job."""
+        payload = cls.normalize_payload(data)
+        fields = payload["fields"]
+        export_format = payload["format"]
+        queryset = cls._apply_filters(User.objects.all(), payload["filters"]).order_by("id")
+        rows = (
+            {field: cls._stringify(getattr(user, field, "")) for field in fields}
+            for user in queryset.iterator()
+        )
+
+        AdminAuditService.log_action(
+            action="download_user_export",
+            actor=actor,
+            target_type="users.User",
+            metadata={
+                "format": export_format,
+                "filters": payload["filters"],
+                "fields": fields,
+            },
+        )
+
+        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"uevent_users_{timestamp}.{export_format}"
+        if export_format == ExportJob.ExportFormat.XLSX:
+            return AdminExcelExportService.build_response(
+                filename=filename,
+                headers=fields,
+                rows=rows,
+                sheet_name="Users",
+            )
+
+        return AdminCsvExportService.build_response(
+            filename=filename,
+            headers=fields,
+            rows=rows,
+        )
+
+    @classmethod
     @transaction.atomic
     def process_user_export_job(cls, *, job_id) -> ExportJob:
         """
@@ -137,14 +179,14 @@ class AdminUserExportService:
         job.save(update_fields=["status", "progress", "started_at", "updated_at"])
 
         try:
-            csv_bytes, rows_count = cls._build_user_export_bytes(job.request_payload)
-            checksum = hashlib.sha256(csv_bytes).hexdigest()
+            export_bytes, rows_count, file_extension = cls._build_user_export_bytes(job.request_payload)
+            checksum = hashlib.sha256(export_bytes).hexdigest()
 
             job.status = ExportJob.Status.COMPLETED
             job.progress = 100
             job.completed_at = timezone.now()
-            job.file_key = f"exports/users/{job.pk}.csv"
-            job.file_size_bytes = len(csv_bytes)
+            job.file_key = f"exports/users/{job.pk}.{file_extension}"
+            job.file_size_bytes = len(export_bytes)
             job.checksum_sha256 = checksum
             job.rows_count = rows_count
             job.error_code = ""
@@ -184,21 +226,35 @@ class AdminUserExportService:
         return job
 
     @classmethod
-    def _build_user_export_bytes(cls, payload: dict[str, Any]) -> tuple[bytes, int]:
-        fields = payload.get("fields") or cls.DEFAULT_FIELDS
-        queryset = cls._apply_filters(User.objects.all(), payload.get("filters") or {})
+    def _build_user_export_bytes(cls, payload: dict[str, Any]) -> tuple[bytes, int, str]:
+        normalized_payload = cls.normalize_payload(payload)
+        fields = normalized_payload["fields"]
+        export_format = normalized_payload["format"]
+        queryset = cls._apply_filters(User.objects.all(), normalized_payload["filters"])
         queryset = queryset.order_by("id")
+
+        rows_count = 0
+
+        def iter_rows():
+            nonlocal rows_count
+            for user in queryset.iterator():
+                rows_count += 1
+                yield {field: cls._stringify(getattr(user, field, "")) for field in fields}
+
+        if export_format == ExportJob.ExportFormat.XLSX:
+            export_bytes = AdminExcelExportService.build_bytes(
+                headers=fields,
+                rows=iter_rows(),
+                sheet_name="Users",
+            )
+            return export_bytes, rows_count, "xlsx"
 
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=fields)
         writer.writeheader()
+        writer.writerows(iter_rows())
 
-        rows_count = 0
-        for user in queryset.iterator():
-            writer.writerow({field: cls._stringify(getattr(user, field, "")) for field in fields})
-            rows_count += 1
-
-        return output.getvalue().encode("utf-8"), rows_count
+        return output.getvalue().encode("utf-8"), rows_count, "csv"
 
     @classmethod
     def _apply_filters(cls, queryset, filters: dict[str, Any]):
@@ -215,7 +271,12 @@ class AdminUserExportService:
 
         search = filters.get("search")
         if search:
-            queryset = queryset.filter(username__icontains=search) | queryset.filter(email__icontains=search)
+            queryset = queryset.filter(
+                Q(username__icontains=search)
+                | Q(email__icontains=search)
+                | Q(full_name__icontains=search)
+                | Q(student_code__icontains=search)
+            )
 
         return queryset
 

@@ -240,3 +240,6 @@ __pycache__/
 /script_server.py
 /logs/
 .gitnexus
+AGENTS.md
+CLAUDE.md
+.claude/skills/gitnexus/

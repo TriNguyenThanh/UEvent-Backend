@@ -169,6 +169,10 @@ class AdminUserExportRequestSerializer(serializers.Serializer):
         return deduped_fields
 
     def validate(self, attrs):
+        export_format = attrs.get("format")
+        if hasattr(export_format, "value"):
+            attrs["format"] = export_format.value
+
         filters = attrs.get("filters") or {}
         account_status = filters.get("account_status")
         if account_status and account_status not in User.AccountStatus.values:

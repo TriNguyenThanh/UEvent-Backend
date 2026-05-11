@@ -15,7 +15,26 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', default=False)
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
+
+CORS_ALLOWED_ORIGINS = env.list(
+    'CORS_ALLOWED_ORIGINS',
+    default=[
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ],
+)
+CORS_ALLOWED_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
+CORS_ALLOWED_HEADERS = [
+    'accept',
+    'authorization',
+    'content-type',
+    'idempotency-key',
+    'origin',
+    'x-request-id',
+]
+CORS_ALLOW_CREDENTIALS = env.bool('CORS_ALLOW_CREDENTIALS', default=True)
+CORS_PREFLIGHT_MAX_AGE = env.int('CORS_PREFLIGHT_MAX_AGE', default=86400)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -42,6 +61,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'common.middleware.CorsMiddleware',
     'common.middleware.RequestIdMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

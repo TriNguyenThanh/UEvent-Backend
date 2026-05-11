@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.system_admin.models import ExportJob
+from apps.system_admin.services.user_export_service import AdminUserExportService
 from apps.users.models import Role, UserRole
 from common.response_codes import ResponseCode
 from common.responses import build_api_response
@@ -117,6 +118,54 @@ class AdminApiResponseContractTests(TestCase):
         )
         self.assertIsInstance(response.data["errors"], dict)
 
+    def test_admin_login_wrong_password_uses_unauthorized_envelope(self):
+        response = self.client.post(
+            reverse("system_admin:admin-login"),
+            {"username": self.admin_user.username, "password": "WrongPass123!"},
+            format="json",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=401,
+            expected_code=ResponseCode.INVALID_CREDENTIALS.value,
+        )
+
+    def test_admin_login_regular_user_uses_forbidden_envelope(self):
+        response = self.client.post(
+            reverse("system_admin:admin-login"),
+            {"username": self.target_user.username, "password": "TargetPass123!"},
+            format="json",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=403,
+            expected_code=ResponseCode.INSUFFICIENT_PERMISSIONS.value,
+        )
+
+    def test_admin_login_inactive_user_uses_unauthorized_envelope(self):
+        user_model = get_user_model()
+        inactive_user = user_model.objects.create_user(
+            username="inactive_admin_contract",
+            email="inactive_admin_contract@example.com",
+            password="InactivePass123!",
+            is_staff=True,
+            is_active=False,
+        )
+
+        response = self.client.post(
+            reverse("system_admin:admin-login"),
+            {"username": inactive_user.username, "password": "InactivePass123!"},
+            format="json",
+        )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=401,
+            expected_code=ResponseCode.INVALID_CREDENTIALS.value,
+        )
+
     def test_admin_token_refresh_success_uses_shared_response_envelope(self):
         refresh = RefreshToken.for_user(self.admin_user)
 
@@ -185,7 +234,7 @@ class AdminApiResponseContractTests(TestCase):
         self.authenticate_admin()
 
         response = self.client.post(
-            reverse("system_admin:user-create"),
+            reverse("system_admin:user-list"),
             {
                 "username": "created_contract",
                 "email": "created_contract@example.com",
@@ -211,6 +260,29 @@ class AdminApiResponseContractTests(TestCase):
         self.assertEqual(response.data["data"]["email"], "created_contract@example.com")
         self.assertEqual(response.data["data"]["student_code"], "SC_CREATED_001")
         self.assertEqual(response.data["data"]["user_roles"][0]["role"]["code"], self.role.code)
+
+    def test_admin_create_user_legacy_route_still_uses_created_response_envelope(self):
+        self.authenticate_admin()
+
+        response = self.client.post(
+            reverse("system_admin:user-create"),
+            {
+                "username": "legacy_created_contract",
+                "email": "legacy_created_contract@example.com",
+                "password": "CreatedPass123!",
+                "full_name": "Legacy Created Contract",
+            },
+            format="json",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_status=201,
+            expected_code=ResponseCode.CREATED.value,
+            expected_message="Tạo người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["username"], "legacy_created_contract")
 
     def test_admin_create_user_duplicate_username_uses_error_envelope(self):
         self.authenticate_admin()
@@ -256,7 +328,7 @@ class AdminApiResponseContractTests(TestCase):
         self.client.force_authenticate(user=self.target_user)
 
         response = self.client.post(
-            reverse("system_admin:user-create"),
+            reverse("system_admin:user-list"),
             {
                 "username": "forbidden_created_contract",
                 "email": "forbidden_created_contract@example.com",
@@ -264,6 +336,26 @@ class AdminApiResponseContractTests(TestCase):
             },
             format="json",
         )
+
+        self.assert_error_envelope(
+            response,
+            expected_status=403,
+            expected_code=ResponseCode.FORBIDDEN.value,
+        )
+
+    def test_admin_user_list_anonymous_uses_error_envelope(self):
+        response = self.client.get(reverse("system_admin:user-list"))
+
+        self.assert_error_envelope(
+            response,
+            expected_status=401,
+            expected_code=ResponseCode.UNAUTHORIZED.value,
+        )
+
+    def test_admin_user_detail_non_admin_uses_error_envelope(self):
+        self.client.force_authenticate(user=self.target_user)
+
+        response = self.client.get(reverse("system_admin:user-detail", kwargs={"pk": self.target_user.pk}))
 
         self.assert_error_envelope(
             response,
@@ -472,6 +564,38 @@ class AdminApiResponseContractTests(TestCase):
             ).exists()
         )
 
+    def test_admin_user_export_create_xlsx_processes_with_xlsx_file_key(self):
+        self.authenticate_admin()
+
+        response = self.client.post(
+            reverse("system_admin:user-export"),
+            {
+                "format": "xlsx",
+                "filters": {"account_status": "active"},
+                "fields": ["id", "username", "email", "account_status"],
+            },
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="export-contract-key-xlsx",
+        )
+
+        self.assert_success_envelope(
+            response,
+            expected_status=202,
+            expected_code=ResponseCode.ACCEPTED.value,
+            expected_message="Tạo job export người dùng thành công.",
+            data_type=dict,
+        )
+        self.assertEqual(response.data["data"]["format"], ExportJob.ExportFormat.XLSX)
+
+        job = AdminUserExportService.process_user_export_job(
+            job_id=response.data["data"]["job_id"],
+        )
+
+        self.assertEqual(job.status, ExportJob.Status.COMPLETED)
+        self.assertTrue(job.file_key.endswith(".xlsx"))
+        self.assertGreater(job.file_size_bytes, 0)
+        self.assertEqual(job.rows_count, 2)
+
     def test_admin_user_export_reuses_idempotency_key(self):
         self.authenticate_admin()
         payload = {"format": "csv", "filters": {"faculty": "Engineering"}}
@@ -552,6 +676,50 @@ class AdminApiResponseContractTests(TestCase):
             expected_code=ResponseCode.API_ERROR.value,
         )
         self.assertIn("filters", response.data["errors"])
+
+    def test_admin_user_export_download_success_returns_csv(self):
+        self.authenticate_admin()
+
+        response = self.client.get(
+            reverse("system_admin:user-export"),
+            {"fields": ["username", "email"], "search": self.target_user.username},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn("attachment; filename=", response["Content-Disposition"])
+        csv_content = response.content.decode("utf-8")
+        self.assertIn("username,email", csv_content)
+        self.assertIn(self.target_user.username, csv_content)
+        self.assertIn(self.target_user.email, csv_content)
+
+    def test_admin_user_export_download_success_returns_xlsx(self):
+        self.authenticate_admin()
+
+        response = self.client.get(
+            reverse("system_admin:user-export"),
+            {"export_format": "xlsx", "fields": ["username", "email"], "search": self.target_user.username},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.assertIn("attachment; filename=", response["Content-Disposition"])
+        self.assertTrue(response["Content-Disposition"].endswith('.xlsx"'))
+        self.assertTrue(response.content.startswith(b"PK"))
+
+    def test_admin_user_export_download_non_admin_uses_error_envelope(self):
+        self.client.force_authenticate(user=self.target_user)
+
+        response = self.client.get(reverse("system_admin:user-export"))
+
+        self.assert_error_envelope(
+            response,
+            expected_status=403,
+            expected_code=ResponseCode.FORBIDDEN.value,
+        )
 
     def test_admin_export_job_detail_success_uses_shared_response_envelope(self):
         self.authenticate_admin()

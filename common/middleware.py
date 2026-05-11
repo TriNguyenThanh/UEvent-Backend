@@ -1,9 +1,41 @@
 from uuid import uuid4
 
-from django.http import JsonResponse
+from django.conf import settings
+from django.http import HttpResponse, JsonResponse
 
 from common.response_codes import ResponseCode
 from common.responses import build_api_response
+
+
+class CorsMiddleware:
+    """Thêm CORS headers cho frontend admin trong môi trường phát triển/Docker."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        origin = request.headers.get('Origin')
+
+        if request.method == 'OPTIONS' and self._is_allowed_origin(origin):
+            response = HttpResponse(status=204)
+        else:
+            response = self.get_response(request)
+
+        if self._is_allowed_origin(origin):
+            response['Access-Control-Allow-Origin'] = origin
+            response['Vary'] = 'Origin'
+            response['Access-Control-Allow-Methods'] = ', '.join(settings.CORS_ALLOWED_METHODS)
+            response['Access-Control-Allow-Headers'] = ', '.join(settings.CORS_ALLOWED_HEADERS)
+            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+            response['Access-Control-Max-Age'] = str(settings.CORS_PREFLIGHT_MAX_AGE)
+            if settings.CORS_ALLOW_CREDENTIALS:
+                response['Access-Control-Allow-Credentials'] = 'true'
+
+        return response
+
+    @staticmethod
+    def _is_allowed_origin(origin):
+        return bool(origin and origin in settings.CORS_ALLOWED_ORIGINS)
 
 
 class RequestIdMiddleware:

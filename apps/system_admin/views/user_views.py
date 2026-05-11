@@ -12,7 +12,7 @@ from ..pagination import AdminStandardPagination
 from ..permissions import IsAdminOrSuperUser
 from ..services.user_export_service import AdminUserExportService
 from ..services.user_services import AdminUserService
-from ..serializers.common_serializers import AdminErrorResponseSerializer
+from ..serializers.common_serializers import AdminCsvExportResponseSerializer, AdminErrorResponseSerializer
 from ..serializers.response_serializers import (
     AdminExportJobEnvelopeResponseSerializer,
     AdminUserEnvelopeResponseSerializer,
@@ -234,9 +234,62 @@ class AdminRemoveRoleView(APIView):
 
 
 class AdminUserExportCreateView(APIView):
-    """Tạo async job export danh sách user."""
+    """Tạo async job export hoặc tải CSV/XLSX danh sách user."""
 
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
+
+    @swagger_auto_schema(
+        operation_summary="Download Users Export",
+        operation_description="Tải CSV hoặc XLSX danh sách user theo cùng bộ lọc với list/export.",
+        manual_parameters=[
+            openapi.Parameter("export_format", openapi.IN_QUERY, type=openapi.TYPE_STRING, enum=["csv", "xlsx"], required=False),
+            openapi.Parameter("format", openapi.IN_QUERY, type=openapi.TYPE_STRING, enum=["csv", "xlsx"], required=False),
+            openapi.Parameter("account_status", openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False),
+            openapi.Parameter("faculty", openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False),
+            openapi.Parameter("is_active", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN, required=False),
+            openapi.Parameter("search", openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False),
+            openapi.Parameter(
+                "fields",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_STRING),
+                collection_format="multi",
+                required=False,
+            ),
+        ],
+        responses={200: AdminCsvExportResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES},
+        tags=["Admin User Management"],
+    )
+    def get(self, request):
+        filters = {
+            key: value
+            for key, value in {
+                "account_status": request.query_params.get("account_status"),
+                "faculty": request.query_params.get("faculty"),
+                "search": request.query_params.get("search"),
+            }.items()
+            if value
+        }
+        is_active = request.query_params.get("is_active")
+        if is_active is not None:
+            filters["is_active"] = is_active.lower() in {"1", "true", "yes"}
+
+        data = {
+            "filters": filters,
+        }
+        export_format = request.query_params.get("export_format") or request.query_params.get("format")
+        if export_format:
+            data["format"] = export_format
+        fields = request.query_params.getlist("fields")
+        if fields:
+            data["fields"] = fields
+
+        serializer = AdminUserExportRequestSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        return AdminUserExportService.build_user_export_response(
+            actor=request.user,
+            data=serializer.to_service_data(),
+        )
 
     @swagger_auto_schema(
         operation_summary="Create User Export Job",
