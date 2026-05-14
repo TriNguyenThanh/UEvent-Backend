@@ -167,6 +167,28 @@ class AdminUserService:
 
     @staticmethod
     @transaction.atomic
+    def create_user(*, actor, data: dict) -> User:
+        role_codes = data.pop("role_codes", [])
+        password = data.pop("password")
+
+        user = User.objects.create_user(password=password, **data)
+
+        if role_codes:
+            AdminUserService._sync_user_roles(user=user, actor=actor, role_codes=role_codes)
+
+        AdminUserService._log_audit(
+            action="create_user",
+            actor=actor,
+            target_user_id=user.pk,
+            metadata={
+                "created_fields": [key for key, value in data.items() if value not in (None, "")],
+                "role_codes": role_codes,
+            },
+        )
+        return AdminUserService.get_user(user.pk)
+
+    @staticmethod
+    @transaction.atomic
     def update_user(*, actor, user_id, data: dict) -> User:
         user = AdminUserService.get_user(user_id)
         role_codes = data.pop("role_codes", None)

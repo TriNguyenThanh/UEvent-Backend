@@ -245,3 +245,6 @@ __pycache__/
 **/.cursor/*
 .cursorrules
 .gitnexus
+AGENTS.md
+CLAUDE.md
+.claude/skills/gitnexus/

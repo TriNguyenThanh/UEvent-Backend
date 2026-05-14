@@ -7,7 +7,7 @@ from .audit_service import AdminAuditService
 
 
 class AdminAuthService:
-    """Service xử lý logic đăng nhập cho Admin."""
+    """Service xử lý logic đăng nhập/đăng xuất cho Admin."""
 
     @staticmethod
     def admin_login(*, username: str, password: str) -> dict:
@@ -52,3 +52,13 @@ class AdminAuthService:
                 "is_superuser": user.is_superuser,
             },
         }
+
+    @staticmethod
+    def admin_logout(*, actor) -> None:
+        """Ghi audit logout stateless cho quản trị viên."""
+        AdminAuditService.log_action(
+            action="admin_logout",
+            actor=actor,
+            target_type="users.User",
+            target_id=str(actor.pk),
+        )
