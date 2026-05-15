@@ -63,3 +63,27 @@ class AdminEventModerationActivitiesEnvelopeResponseSerializer(ApiSuccessRespons
 
 class AdminEventPolicyHandbookEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
     """Envelope response cho admin event policy handbook."""
+
+
+class AdminSupportTicketEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin support ticket detail/action."""
+
+
+class AdminSupportTicketListEnvelopeResponseSerializer(PaginatedApiResponseSerializer):
+    """Envelope response cho admin support ticket list."""
+
+
+class AdminSupportTicketStatisticsEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin support ticket statistics."""
+
+
+class AdminNotificationEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin notification detail/action."""
+
+
+class AdminNotificationListEnvelopeResponseSerializer(PaginatedApiResponseSerializer):
+    """Envelope response cho admin notification list."""
+
+
+class AdminNotificationStatisticsEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin notification statistics."""
