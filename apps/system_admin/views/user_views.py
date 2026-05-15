@@ -64,6 +64,25 @@ class AdminUserListView(generics.ListAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary="Create Admin User",
+        operation_description="Tạo user mới qua route collection /users/ và gán role theo danh sách role_codes nếu có.",
+        request_body=AdminCreateUserInputSerializer,
+        responses={201: AdminUserEnvelopeResponseSerializer(), **ADMIN_USER_ERROR_RESPONSES},
+        tags=["Admin User Management"],
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = AdminCreateUserInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = AdminUserService.create_user(
+            actor=request.user,
+            data=serializer.to_service_data(),
+        )
+        return created_response(
+            data=AdminUserDetailOutputSerializer(user).data,
+            message="Tạo người dùng thành công.",
+        )
     
     
 class AdminUserCreateView(APIView):

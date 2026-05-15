@@ -248,3 +248,4 @@ __pycache__/
 AGENTS.md
 CLAUDE.md
 .claude/skills/gitnexus/
+.env.production
