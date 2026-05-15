@@ -74,7 +74,7 @@ def _issue_default_ticket(registration: EventRegistration) -> Ticket:
 
 
 @transaction.atomic
-def create_event_registration(*, user, event_id):
+def create_event_registration(*, user, event_id, answers=None):
     try:
         event = Event.objects.select_for_update().get(id=event_id)
     except Event.DoesNotExist as exc:
@@ -102,12 +102,34 @@ def create_event_registration(*, user, event_id):
             if is_waitlisted
             else EventRegistration.RegistrationStatus.REGISTERED
         ),
+        form_answers_jsonb=answers or [],
     )
 
     if registration.status == EventRegistration.RegistrationStatus.REGISTERED:
         _issue_default_ticket(registration)
 
     return EventRegistration.objects.select_related("event", "ticket").get(id=registration.id)
+
+
+@transaction.atomic
+def cancel_event_registration(*, registration: EventRegistration, reason: str | None = None):
+    if registration.status in {
+        EventRegistration.RegistrationStatus.CANCELLED,
+        EventRegistration.RegistrationStatus.REJECTED,
+    }:
+        raise ValidationError({"registration": "Registration is already cancelled."})
+
+    registration.status = EventRegistration.RegistrationStatus.CANCELLED
+    registration.cancelled_at = timezone.now()
+    registration.cancel_reason = reason or None
+    registration.save(update_fields=["status", "cancelled_at", "cancel_reason", "updated_at"])
+
+    ticket = getattr(registration, "ticket", None)
+    if ticket and ticket.status != Ticket.TicketStatus.CANCELLED:
+        ticket.status = Ticket.TicketStatus.CANCELLED
+        ticket.save(update_fields=["status", "updated_at"])
+
+    return EventRegistration.objects.select_related("event", "user", "ticket").get(id=registration.id)
 
 
 @transaction.atomic
