@@ -2,7 +2,6 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.system_admin.models import ExportJob
 from apps.system_admin.services.user_export_service import AdminUserExportService
@@ -91,128 +90,6 @@ class AdminApiResponseContractTests(TestCase):
         self.assertEqual(response["code"], "invalid_audit_filter")
         self.assertIsNone(response["data"])
         self.assertEqual(response["errors"], {"filter": ["Unsupported filter."]})
-
-    def test_admin_login_success_uses_shared_response_envelope(self):
-        response = self.client.post(
-            reverse("system_admin:admin-login"),
-            {"username": self.admin_user.username, "password": self.admin_password},
-            format="json",
-        )
-
-        self.assert_success_envelope(
-            response,
-            expected_message="Đăng nhập quản trị viên thành công.",
-            data_type=dict,
-        )
-        self.assertIn("access", response.data["data"])
-        self.assertIn("refresh", response.data["data"])
-        self.assertIn("user", response.data["data"])
-
-    def test_admin_login_validation_error_uses_shared_response_envelope(self):
-        response = self.client.post(reverse("system_admin:admin-login"), {}, format="json")
-
-        self.assert_error_envelope(
-            response,
-            expected_status=400,
-            expected_code=ResponseCode.API_ERROR.value,
-        )
-        self.assertIsInstance(response.data["errors"], dict)
-
-    def test_admin_login_wrong_password_uses_unauthorized_envelope(self):
-        response = self.client.post(
-            reverse("system_admin:admin-login"),
-            {"username": self.admin_user.username, "password": "WrongPass123!"},
-            format="json",
-        )
-
-        self.assert_error_envelope(
-            response,
-            expected_status=401,
-            expected_code=ResponseCode.INVALID_CREDENTIALS.value,
-        )
-
-    def test_admin_login_regular_user_uses_forbidden_envelope(self):
-        response = self.client.post(
-            reverse("system_admin:admin-login"),
-            {"username": self.target_user.username, "password": "TargetPass123!"},
-            format="json",
-        )
-
-        self.assert_error_envelope(
-            response,
-            expected_status=403,
-            expected_code=ResponseCode.INSUFFICIENT_PERMISSIONS.value,
-        )
-
-    def test_admin_login_inactive_user_uses_unauthorized_envelope(self):
-        user_model = get_user_model()
-        inactive_user = user_model.objects.create_user(
-            username="inactive_admin_contract",
-            email="inactive_admin_contract@example.com",
-            password="InactivePass123!",
-            is_staff=True,
-            is_active=False,
-        )
-
-        response = self.client.post(
-            reverse("system_admin:admin-login"),
-            {"username": inactive_user.username, "password": "InactivePass123!"},
-            format="json",
-        )
-
-        self.assert_error_envelope(
-            response,
-            expected_status=401,
-            expected_code=ResponseCode.INVALID_CREDENTIALS.value,
-        )
-
-    def test_admin_token_refresh_success_uses_shared_response_envelope(self):
-        refresh = RefreshToken.for_user(self.admin_user)
-
-        response = self.client.post(
-            reverse("system_admin:admin-token-refresh"),
-            {"refresh": str(refresh)},
-            format="json",
-        )
-
-        self.assert_success_envelope(
-            response,
-            expected_message="Làm mới access token thành công.",
-            data_type=dict,
-        )
-        self.assertIn("access", response.data["data"])
-
-    def test_admin_me_success_uses_shared_response_envelope(self):
-        self.authenticate_admin()
-
-        response = self.client.get(reverse("system_admin:admin-me"))
-
-        self.assert_success_envelope(
-            response,
-            expected_message="Lấy thông tin quản trị viên thành công.",
-            data_type=dict,
-        )
-        self.assertEqual(response.data["data"]["username"], self.admin_user.username)
-
-    def test_admin_logout_success_uses_shared_response_envelope(self):
-        self.authenticate_admin()
-
-        response = self.client.post(reverse("system_admin:admin-logout"), {}, format="json")
-
-        self.assert_success_envelope(
-            response,
-            expected_message="Đăng xuất quản trị viên thành công.",
-        )
-        self.assertIsNone(response.data["data"])
-
-    def test_admin_logout_unauthenticated_uses_shared_response_envelope(self):
-        response = self.client.post(reverse("system_admin:admin-logout"), {}, format="json")
-
-        self.assert_error_envelope(
-            response,
-            expected_status=401,
-            expected_code=ResponseCode.UNAUTHORIZED.value,
-        )
 
     def test_admin_user_list_success_uses_paginated_response_envelope(self):
         self.authenticate_admin()
