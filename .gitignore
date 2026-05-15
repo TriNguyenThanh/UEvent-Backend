@@ -231,7 +231,6 @@ __pycache__/
 */__pycache__/
 **/__pycache__/
 */*/__pycache__/*
-!apps/interactions/migrations/0003_eventquestion_is_pinned.py
 *.py[cod]
 *.pyc
 *.pyo

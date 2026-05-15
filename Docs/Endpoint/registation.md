@@ -24,12 +24,12 @@ Ví dụ field tùy chỉnh:
 
 | Method   | Endpoint                                                  | Quyền     | Mô tả                                       |
 | -------- | --------------------------------------------------------- | --------- | ------------------------------------------- |
-| `POST`   | `/api/v1/events/{eventId}/registrations/`                         | User      | Đăng ký tham gia sự kiện                    |
-| `GET`    | `/api/v1/events/{eventId}/registrations/`                         | Organizer | Xem danh sách đăng ký                       |
-| `GET`    | `/api/v1/events/{eventId}/registrations/{registrationId}/`        | Organizer | Xem chi tiết đăng ký                        |
-| `DELETE` | `/api/v1/events/{eventId}/registrations/me/`                      | User      | Hủy đăng ký của bản thân                    |
-| `PATCH`  | `/api/v1/events/{eventId}/registrations/{registrationId}/cancel/` | Organizer | BTC hủy đăng ký của người tham gia          |
-| `GET`    | `/api/v1/registrations/me/`                                       | User      | Xem toàn bộ đăng ký của người dùng hiện tại |
+| `POST`   | `/events/{eventId}/registrations/`                         | User      | Đăng ký tham gia sự kiện                    |
+| `GET`    | `/events/{eventId}/registrations/`                         | Organizer | Xem danh sách đăng ký                       |
+| `GET`    | `/events/{eventId}/registrations/{registrationId}/`        | Organizer | Xem chi tiết đăng ký                        |
+| `DELETE` | `/events/{eventId}/registrations/me/`                      | User      | Hủy đăng ký của bản thân                    |
+| `PATCH`  | `/events/{eventId}/registrations/{registrationId}/cancel/` | Organizer | BTC hủy đăng ký của người tham gia          |
+| `GET`    | `/registrations/me/`                                       | User      | Xem toàn bộ đăng ký của người dùng hiện tại |
 
 Body đăng ký ví dụ:
 
@@ -54,11 +54,11 @@ Body đăng ký ví dụ:
 
 | Method  | Endpoint                             | Quyền            | Mô tả                            |
 | ------- | ------------------------------------ | ---------------- | -------------------------------- |
-| `GET`   | `/api/v1/tickets/me/`                | User             | Xem danh sách vé của tôi         |
-| `GET`   | `/api/v1/tickets/{ticketId}/`        | User             | Xem chi tiết vé                  |
-| `GET`   | `/api/v1/tickets/{ticketId}/qr/`     | User             | Lấy mã QR của vé                 |
+| `GET`   | `/tickets/me/`                | User             | Xem danh sách vé của tôi         |
+| `GET`   | `/tickets/{ticketId}/`        | User             | Xem chi tiết vé                  |
+| `GET`   | `/tickets/{ticketId}/qr/`     | User             | Lấy mã QR của vé                 |
 | `POST`  | `/events/{eventId}/tickets/generate` | Organizer        | Tạo lại vé QR cho người tham gia |
-| `PATCH` | `/api/v1/tickets/{ticketId}/cancel/` | User / Organizer | Hủy vé                           |
+| `PATCH` | `/tickets/{ticketId}/cancel/` | User / Organizer | Hủy vé                           |
 
 Nên lưu ý: mã QR không nên chứa toàn bộ thông tin cá nhân. QR chỉ nên chứa `ticketCode` hoặc token định danh vé.
 
