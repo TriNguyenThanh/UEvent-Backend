@@ -127,9 +127,9 @@ STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = 'users.User'
 
-KEYCLOAK_SERVER_URL = env('KEYCLOAK_SERVER_URL').rstrip('/')
-KEYCLOAK_REALM = env('KEYCLOAK_REALM')
-KEYCLOAK_AUDIENCE = env('KEYCLOAK_AUDIENCE')
+KEYCLOAK_SERVER_URL = env('KEYCLOAK_SERVER_URL', default='http://localhost').rstrip('/')
+KEYCLOAK_REALM = env('KEYCLOAK_REALM', default='test-realm')
+KEYCLOAK_AUDIENCE = env('KEYCLOAK_AUDIENCE', default='test-audience')
 KEYCLOAK_ISSUER = f"{KEYCLOAK_SERVER_URL}/realms/{KEYCLOAK_REALM}"
 KEYCLOAK_JWKS_URL = f"{KEYCLOAK_ISSUER}/protocol/openid-connect/certs"
 KEYCLOAK_JWKS_CACHE_TTL = env.int('KEYCLOAK_JWKS_CACHE_TTL', default=300)
