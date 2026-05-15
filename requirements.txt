@@ -6,7 +6,10 @@ psycopg2-binary
 django-environ
 drf-yasg
 django-filter
-djangorestframework-simplejwt
+PyJWT
+cryptography
+requests
+cachetools
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-instrumentation-django

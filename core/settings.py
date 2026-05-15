@@ -4,7 +4,6 @@ Django settings for core project.
 import os
 import environ
 from pathlib import Path
-from datetime import timedelta
 
 env = environ.Env()
 
@@ -50,7 +49,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'django_filters',
-    'rest_framework_simplejwt',
     'apps.users',
     'apps.locations',
     'apps.events',
@@ -129,11 +127,19 @@ STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = 'users.User'
 
+KEYCLOAK_SERVER_URL = env('KEYCLOAK_SERVER_URL', default='http://localhost').rstrip('/')
+KEYCLOAK_REALM = env('KEYCLOAK_REALM', default='test-realm')
+KEYCLOAK_AUDIENCE = env('KEYCLOAK_AUDIENCE', default='test-audience')
+KEYCLOAK_ISSUER = f"{KEYCLOAK_SERVER_URL}/realms/{KEYCLOAK_REALM}"
+KEYCLOAK_JWKS_URL = f"{KEYCLOAK_ISSUER}/protocol/openid-connect/certs"
+KEYCLOAK_JWKS_CACHE_TTL = env.int('KEYCLOAK_JWKS_CACHE_TTL', default=300)
+KEYCLOAK_JWKS_TIMEOUT = env.int('KEYCLOAK_JWKS_TIMEOUT', default=5)
+KEYCLOAK_JWT_ALGORITHMS = env.list('KEYCLOAK_JWT_ALGORITHMS', default=['RS256'])
+
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'common.exceptions.custom_exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        'common.authentication.KeycloakJWTAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
@@ -142,15 +148,6 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-}
-
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=env.int('ACCESS_TOKEN_LIFETIME', default=30)),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=env.int('REFRESH_TOKEN_LIFETIME', default=60)),
-    'ROTATE_REFRESH_TOKENS': False,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
 }
 
 SWAGGER_SETTINGS = {

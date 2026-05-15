@@ -1,13 +1,14 @@
 from django.urls import path
-from .views import auth_views, category_views, event_views, notification_views, support_views, user_views
+
+from .views import auth_views, user_views, category_views, event_views, support_views, notification_views
 
 app_name = "system_admin"
 
 urlpatterns = [
     # Auth
-    path("auth/login/", auth_views.AdminLoginView.as_view(), name="admin-login"),
-    path("auth/refresh/", auth_views.AdminTokenRefreshView.as_view(), name="admin-token-refresh"),
-    path("auth/logout/", auth_views.AdminLogoutView.as_view(), name="admin-logout"),
+    # path("auth/login/", auth_views.AdminLoginView.as_view(), name="admin-login"),
+    # path("auth/refresh/", auth_views.AdminTokenRefreshView.as_view(), name="admin-token-refresh"),
+    # path("auth/logout/", auth_views.AdminLogoutView.as_view(), name="admin-logout"),
     path("auth/me/", auth_views.AdminMeView.as_view(), name="admin-me"),
 
     # User Management
@@ -37,7 +38,7 @@ urlpatterns = [
     path("events/<uuid:pk>/", event_views.AdminEventDetailDeleteView.as_view(), name="event-detail"),
     path("events/<uuid:pk>/status/", event_views.AdminEventStatusView.as_view(), name="event-status"),
 
-    # Support Management
+    # Support Tickets
     path("support/tickets/", support_views.AdminSupportTicketListView.as_view(), name="support-ticket-list"),
     path("support/tickets/statistics/", support_views.AdminSupportTicketStatisticsView.as_view(), name="support-ticket-statistics"),
     path("support/tickets/<uuid:pk>/", support_views.AdminSupportTicketDetailUpdateView.as_view(), name="support-ticket-detail"),
@@ -45,7 +46,7 @@ urlpatterns = [
     path("support/tickets/<uuid:pk>/resolve/", support_views.AdminSupportTicketResolveView.as_view(), name="support-ticket-resolve"),
     path("support/tickets/<uuid:pk>/escalate/", support_views.AdminSupportTicketEscalateView.as_view(), name="support-ticket-escalate"),
 
-    # Notification Management
+    # Notifications
     path("notifications/", notification_views.AdminNotificationListCreateView.as_view(), name="notification-list"),
     path("notifications/statistics/", notification_views.AdminNotificationStatisticsView.as_view(), name="notification-statistics"),
     path("notifications/pagination-config/", notification_views.AdminNotificationPaginationConfigView.as_view(), name="notification-pagination-config"),
