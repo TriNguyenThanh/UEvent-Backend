@@ -1,13 +1,14 @@
 from django.urls import path
-from .views import auth_views, category_views, event_views, user_views
+from .views import auth_views, user_views
+# from .views import category_views, event_views
 
 app_name = "system_admin"
 
 urlpatterns = [
     # Auth
-    path("auth/login/", auth_views.AdminLoginView.as_view(), name="admin-login"),
-    path("auth/refresh/", auth_views.AdminTokenRefreshView.as_view(), name="admin-token-refresh"),
-    path("auth/logout/", auth_views.AdminLogoutView.as_view(), name="admin-logout"),
+    # path("auth/login/", auth_views.AdminLoginView.as_view(), name="admin-login"),
+    # path("auth/refresh/", auth_views.AdminTokenRefreshView.as_view(), name="admin-token-refresh"),
+    # path("auth/logout/", auth_views.AdminLogoutView.as_view(), name="admin-logout"),
     path("auth/me/", auth_views.AdminMeView.as_view(), name="admin-me"),
 
     # User Management
@@ -24,16 +25,16 @@ urlpatterns = [
     path("exports/<uuid:job_id>/", user_views.AdminExportJobDetailView.as_view(), name="export-job-detail"),
 
     # Category Management
-    path("categories/", category_views.AdminCategoryListCreateView.as_view(), name="category-list"),
-    path("categories/statistics/", category_views.AdminCategoryStatisticsView.as_view(), name="category-statistics"),
-    path("categories/<uuid:pk>/", category_views.AdminCategoryDetailUpdateDeleteView.as_view(), name="category-detail"),
+    # path("categories/", category_views.AdminCategoryListCreateView.as_view(), name="category-list"),
+    # path("categories/statistics/", category_views.AdminCategoryStatisticsView.as_view(), name="category-statistics"),
+    # path("categories/<uuid:pk>/", category_views.AdminCategoryDetailUpdateDeleteView.as_view(), name="category-detail"),
 
     # Event Management
-    path("events/", event_views.AdminEventListView.as_view(), name="event-list"),
-    path("events/statistics/", event_views.AdminEventStatisticsView.as_view(), name="event-statistics"),
-    path("events/moderation-pulse/", event_views.AdminEventModerationPulseView.as_view(), name="event-moderation-pulse"),
-    path("events/moderation-activities/", event_views.AdminEventModerationActivitiesView.as_view(), name="event-moderation-activities"),
-    path("events/policy-handbook/", event_views.AdminEventPolicyHandbookView.as_view(), name="event-policy-handbook"),
-    path("events/<uuid:pk>/", event_views.AdminEventDetailDeleteView.as_view(), name="event-detail"),
-    path("events/<uuid:pk>/status/", event_views.AdminEventStatusView.as_view(), name="event-status"),
+    # path("events/", event_views.AdminEventListView.as_view(), name="event-list"),
+    # path("events/statistics/", event_views.AdminEventStatisticsView.as_view(), name="event-statistics"),
+    # path("events/moderation-pulse/", event_views.AdminEventModerationPulseView.as_view(), name="event-moderation-pulse"),
+    # path("events/moderation-activities/", event_views.AdminEventModerationActivitiesView.as_view(), name="event-moderation-activities"),
+    # path("events/policy-handbook/", event_views.AdminEventPolicyHandbookView.as_view(), name="event-policy-handbook"),
+    # path("events/<uuid:pk>/", event_views.AdminEventDetailDeleteView.as_view(), name="event-detail"),
+    # path("events/<uuid:pk>/status/", event_views.AdminEventStatusView.as_view(), name="event-status"),
 ]
