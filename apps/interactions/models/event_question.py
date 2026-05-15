@@ -22,6 +22,7 @@ class EventQuestion(BaseModel):
     )
     question_text = models.TextField()
     is_anonymous = models.BooleanField(default=False)
+    is_pinned = models.BooleanField(default=False)
     answer_text = models.TextField(blank=True, null=True)
     answered_by = models.ForeignKey(
         "users.User",
@@ -43,6 +44,10 @@ class EventQuestion(BaseModel):
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["event", "moderation_status", "asked_at"]),
+            models.Index(
+                fields=["event", "is_pinned", "moderation_status"],
+                name="event_quest_event_i_298ad0_idx",
+            ),
             models.Index(fields=["user", "created_at"]),
         ]
 

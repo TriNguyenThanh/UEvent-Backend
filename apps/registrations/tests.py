@@ -42,8 +42,8 @@ class RegistrationApiTests(APITestCase):
         self.client.force_authenticate(user=self.attendee)
 
         response = self.client.post(
-            "/api/v1/registrations/",
-            {"event_id": str(self.event.id)},
+            f"/api/v1/events/{self.event.id}/registrations/",
+            {},
             format="json",
         )
 
@@ -99,7 +99,7 @@ class RegistrationApiTests(APITestCase):
         )
 
         self.client.force_authenticate(user=self.attendee)
-        response = self.client.get("/api/v1/registrations/")
+        response = self.client.get("/api/v1/registrations/me/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -117,8 +117,8 @@ class RegistrationApiTests(APITestCase):
 
         self.client.force_authenticate(user=self.attendee)
         response = self.client.post(
-            "/api/v1/registrations/",
-            {"event_id": str(self.event.id)},
+            f"/api/v1/events/{self.event.id}/registrations/",
+            {},
             format="json",
         )
 
@@ -145,7 +145,7 @@ class RegistrationApiTests(APITestCase):
         )
 
         self.client.force_authenticate(user=self.attendee)
-        response = self.client.get(f"/api/v1/registrations/{registration.id}/qr/")
+        response = self.client.get(f"/api/v1/tickets/{registration.ticket.id}/qr/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("qr_payload", response.data)

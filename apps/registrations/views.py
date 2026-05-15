@@ -8,7 +8,6 @@ from drf_yasg.utils import swagger_auto_schema
 
 from apps.events.models import Event
 from apps.registrations.models import EventRegistration, Ticket
-from apps.registrations.permissions import IsRegistrationOwner
 from apps.registrations.serializers import (
     RegistrationCancelSerializer,
     RegistrationCreateSerializer,
@@ -44,60 +43,6 @@ def is_event_organizer(user, event):
 def assert_event_organizer(request, event):
     if not is_event_organizer(request.user, event):
         raise PermissionDenied("You do not have organizer access to this event.")
-
-
-class RegistrationListCreateView(generics.ListCreateAPIView):
-    """
-    Backward-compatible registration endpoint.
-
-    GET /api/v1/registrations/
-    POST /api/v1/registrations/ {"event_id": "...", "answers": []}
-    """
-    permission_classes = [IsAuthenticated]
-    serializer_class = RegistrationListSerializer
-
-    def get_queryset(self): # type: ignore
-        return (
-            EventRegistration.objects.filter(user=self.request.user)
-            .select_related("event", "user", "ticket")
-            .order_by("-registered_at", "-created_at")
-        )
-
-    @swagger_auto_schema(
-        operation_summary="List Registrations",
-        operation_description="Lấy danh sách đăng ký sự kiện của người dùng hiện tại (có phân trang).",
-        responses={
-            200: RegistrationListSerializer(many=True),
-            **REGISTRATION_ERROR_RESPONSES,
-        },
-        tags=["Registrations"],
-    )
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-    @swagger_auto_schema(
-        operation_summary="Create Registration",
-        operation_description="Đăng ký tham gia sự kiện theo event_id.",
-        request_body=RegistrationCreateSerializer,
-        responses={
-            201: RegistrationListSerializer(),
-            **REGISTRATION_ERROR_RESPONSES,
-        },
-        tags=["Registrations"],
-    )
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        serializer = RegistrationCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        registration = create_event_registration(
-            user=request.user,
-            **serializer.validated_data,
-        )
-        response_serializer = RegistrationListSerializer(registration)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class MyRegistrationListView(generics.ListAPIView):
@@ -254,30 +199,6 @@ class OrganizerRegistrationCancelView(APIView):
             reason=serializer.validated_data.get("reason"),
         )
         return Response(RegistrationListSerializer(registration).data, status=status.HTTP_200_OK)
-
-
-class RegistrationQrAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsRegistrationOwner]
-
-    @swagger_auto_schema(
-        operation_summary="Get Registration QR",
-        operation_description="Lấy QR payload tạm thời để check-in cho registration (chỉ owner được phép).",
-        responses={
-            200: RegistrationQrSerializer(),
-            **REGISTRATION_ERROR_RESPONSES,
-        },
-        tags=["Registrations"],
-    )
-    def get(self, request, id):
-        registration = get_object_or_404(
-            EventRegistration.objects.select_related("event", "ticket"),
-            id=id,
-        )
-        self.check_object_permissions(request, registration)
-
-        qr_data = issue_registration_qr(registration=registration)
-        serializer = RegistrationQrSerializer(qr_data)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TicketListView(generics.ListAPIView):

@@ -6,8 +6,6 @@ from apps.registrations.views import (
     MyEventRegistrationCancelView,
     MyRegistrationListView,
     OrganizerRegistrationCancelView,
-    RegistrationListCreateView,
-    RegistrationQrAPIView,
     TicketCancelView,
     TicketDetailView,
     TicketListView,
@@ -15,9 +13,7 @@ from apps.registrations.views import (
 )
 
 urlpatterns = [
-    path("registrations/", RegistrationListCreateView.as_view(), name="registration-list-create"),
     path("registrations/me/", MyRegistrationListView.as_view(), name="registration-me-list"),
-    path("registrations/<uuid:id>/qr/", RegistrationQrAPIView.as_view(), name="registration-qr"),
     path(
         "events/<uuid:event_id>/registrations/",
         EventRegistrationListCreateView.as_view(),

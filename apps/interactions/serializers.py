@@ -24,9 +24,12 @@ class EventFeedbackSerializer(serializers.ModelSerializer):
         queryset=Event.objects.all(),
         source="event",
         write_only=True,
+        required=False,
     )
     event = EventSummarySerializer(read_only=True)
     user = serializers.SerializerMethodField()
+    comment = serializers.CharField(source="content", required=False, allow_blank=True)
+    isAnonymous = serializers.BooleanField(source="is_anonymous", required=False)
 
     class Meta:
         model = EventFeedback
@@ -37,7 +40,9 @@ class EventFeedbackSerializer(serializers.ModelSerializer):
             "user",
             "rating",
             "content",
+            "comment",
             "is_anonymous",
+            "isAnonymous",
             "created_at",
             "updated_at",
         ]
@@ -54,6 +59,14 @@ class EventFeedbackSerializer(serializers.ModelSerializer):
         event = attrs.get("event") or getattr(self.instance, "event", None)
 
         if request and request.method == "POST":
+            if event is None and self.context.get("event_id"):
+                try:
+                    event = Event.objects.get(id=self.context["event_id"])
+                    attrs["event"] = event
+                except Event.DoesNotExist as exc:
+                    raise serializers.ValidationError({"event_id": "Event not found."}) from exc
+            if event is None:
+                raise serializers.ValidationError({"event_id": "This field is required."})
             if event.status != Event.Status.FINISHED:
                 raise serializers.ValidationError(
                     {"event_id": "Chỉ có thể gửi feedback khi sự kiện đã kết thúc."}
@@ -86,6 +99,7 @@ class EventQuestionSerializer(serializers.ModelSerializer):
         queryset=Event.objects.all(),
         source="event",
         write_only=True,
+        required=False,
     )
     event = EventSummarySerializer(read_only=True)
     user = serializers.SerializerMethodField()
@@ -100,6 +114,7 @@ class EventQuestionSerializer(serializers.ModelSerializer):
             "user",
             "question_text",
             "is_anonymous",
+            "is_pinned",
             "answer_text",
             "answered_by",
             "moderation_status",
@@ -113,6 +128,7 @@ class EventQuestionSerializer(serializers.ModelSerializer):
             "event",
             "user",
             "answered_by",
+            "is_pinned",
             "asked_at",
             "answered_at",
             "created_at",
@@ -134,3 +150,19 @@ class EventQuestionSerializer(serializers.ModelSerializer):
             instance.answered_by = None
             instance.answered_at = None
         return super().update(instance, validated_data)
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if request and request.method == "POST" and not attrs.get("event"):
+            event_id = self.context.get("event_id")
+            if not event_id:
+                raise serializers.ValidationError({"event_id": "This field is required."})
+            try:
+                attrs["event"] = Event.objects.get(id=event_id)
+            except Event.DoesNotExist as exc:
+                raise serializers.ValidationError({"event_id": "Event not found."}) from exc
+        return attrs
+
+
+class QuestionAnswerSerializer(serializers.Serializer):
+    answer_text = serializers.CharField(allow_blank=False)
