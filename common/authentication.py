@@ -24,12 +24,15 @@ class KeycloakJWTAuthentication(BaseAuthentication):
             return None
 
         try:
-            payload = self._decode_token(token)
-            user = self._get_or_create_user(payload)
-            return user, payload
+            return self.authenticate_token(token)
         except AuthenticationFailed as e:
             print(f"[Keycloak Auth Error] {e}")
             raise
+
+    def authenticate_token(self, token: str) -> Tuple[Any, Dict[str, Any]]:
+        payload = self._decode_token(token)
+        user = self._get_or_create_user(payload)
+        return user, payload
 
     def authenticate_header(self, request) -> str:
         return self.keyword
