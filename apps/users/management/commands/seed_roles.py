@@ -2,35 +2,10 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.users.models import Role
+from apps.utils.seed_data import LEGACY_SEED_ROLE_CODES, SEED_ROLE_CODES, SEED_ROLES
 
 
-DEFAULT_ROLES = [
-    {
-        "code": "student",
-        "name": "Student",
-        "description": "Người dùng sinh viên, có thể tham gia và đăng ký sự kiện.",
-    },
-    {
-        "code": "organizer",
-        "name": "Organizer",
-        "description": "Người tổ chức sự kiện, có quyền tạo và quản lý sự kiện được phân công.",
-    },
-    {
-        "code": "admin",
-        "name": "Admin",
-        "description": "Quản trị viên hệ thống, có quyền truy cập khu vực quản trị.",
-    },
-    {
-        "code": "faculty_admin",
-        "name": "Faculty Admin",
-        "description": "Quản trị viên cấp khoa, quản lý dữ liệu và người dùng thuộc khoa phụ trách.",
-    },
-    {
-        "code": "system_admin",
-        "name": "System Admin",
-        "description": "Quản trị viên vận hành hệ thống với quyền quản trị toàn cục.",
-    },
-]
+DEFAULT_ROLES = SEED_ROLES
 
 
 class Command(BaseCommand):
@@ -58,8 +33,13 @@ class Command(BaseCommand):
                 updated_count += 1
                 self.stdout.write(f"Updated role: {role.code}")
 
+        deleted_count, _ = Role.objects.filter(code__in=LEGACY_SEED_ROLE_CODES).exclude(
+            code__in=SEED_ROLE_CODES
+        ).delete()
+
         self.stdout.write(
             self.style.SUCCESS(
-                f"Seeded roles successfully. created={created_count}, updated={updated_count}"
+                "Seeded roles successfully. "
+                f"created={created_count}, updated={updated_count}, deleted_legacy={deleted_count}"
             )
         )
