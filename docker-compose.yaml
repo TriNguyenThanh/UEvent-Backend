@@ -1,4 +1,68 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uevent_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - OTEL_ENABLED=true
+      - OTEL_SERVICE_NAME=uevent-backend
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+    command: ["/bin/sh", "/app/entrypoint.sh"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - app_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - backend
+
+  notification-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uevent_notification_scheduler
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - OTEL_ENABLED=true
+      - OTEL_SERVICE_NAME=uevent-notification-scheduler
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+    command:
+      - /bin/sh
+      - -c
+      - |
+        echo "Waiting for database at $${HOST}:$${PORT}..."
+        while ! nc -z "$${HOST}" "$${PORT}"; do
+          sleep 1
+        done
+        echo "Notification scheduler is running"
+        while true; do
+          python manage.py publish_scheduled_notifications --batch-size "$${NOTIFICATION_SCHEDULER_BATCH_SIZE:-100}" || true
+          sleep "$${NOTIFICATION_SCHEDULER_INTERVAL_SECONDS:-60}"
+        done
+    volumes:
+      - .:/app
+      - app_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - backend
+
   db:
     image: postgres:16-alpine
     container_name: postgres_server

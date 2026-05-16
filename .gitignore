@@ -239,3 +239,7 @@ __pycache__/
 /sdockerDB/
 /script_server.py
 /logs/
+.env.production
+AGENTS.md
+CLAUDE.md
+.claude/
