@@ -6,9 +6,9 @@ app_name = "system_admin"
 
 urlpatterns = [
     # Auth
-    # path("auth/login/", auth_views.AdminLoginView.as_view(), name="admin-login"),
-    # path("auth/refresh/", auth_views.AdminTokenRefreshView.as_view(), name="admin-token-refresh"),
-    # path("auth/logout/", auth_views.AdminLogoutView.as_view(), name="admin-logout"),
+    path("auth/login/", auth_views.AdminLoginView.as_view(), name="admin-login"),
+    path("auth/refresh/", auth_views.AdminTokenRefreshView.as_view(), name="admin-token-refresh"),
+    path("auth/logout/", auth_views.AdminLogoutView.as_view(), name="admin-logout"),
     path("auth/me/", auth_views.AdminMeView.as_view(), name="admin-me"),
 
     # User Management

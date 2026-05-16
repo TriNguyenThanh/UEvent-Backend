@@ -131,10 +131,16 @@ AUTH_USER_MODEL = 'users.User'
 KEYCLOAK_SERVER_URL = env('KEYCLOAK_SERVER_URL', default='http://localhost').rstrip('/')
 KEYCLOAK_REALM = env('KEYCLOAK_REALM', default='test-realm')
 KEYCLOAK_AUDIENCE = env('KEYCLOAK_AUDIENCE', default='test-audience')
+KEYCLOAK_CLIENT_ID = env('KEYCLOAK_CLIENT_ID', default=KEYCLOAK_AUDIENCE)
+KEYCLOAK_CLIENT_SECRET = env('KEYCLOAK_CLIENT_SECRET', default='')
+KEYCLOAK_SCOPE = env('KEYCLOAK_SCOPE', default='openid email profile')
 KEYCLOAK_ISSUER = f"{KEYCLOAK_SERVER_URL}/realms/{KEYCLOAK_REALM}"
+KEYCLOAK_TOKEN_URL = f"{KEYCLOAK_ISSUER}/protocol/openid-connect/token"
+KEYCLOAK_LOGOUT_URL = f"{KEYCLOAK_ISSUER}/protocol/openid-connect/logout"
 KEYCLOAK_JWKS_URL = f"{KEYCLOAK_ISSUER}/protocol/openid-connect/certs"
 KEYCLOAK_JWKS_CACHE_TTL = env.int('KEYCLOAK_JWKS_CACHE_TTL', default=300)
 KEYCLOAK_JWKS_TIMEOUT = env.int('KEYCLOAK_JWKS_TIMEOUT', default=5)
+KEYCLOAK_TOKEN_TIMEOUT = env.int('KEYCLOAK_TOKEN_TIMEOUT', default=10)
 KEYCLOAK_JWT_ALGORITHMS = env.list('KEYCLOAK_JWT_ALGORITHMS', default=['RS256'])
 
 REST_FRAMEWORK = {
