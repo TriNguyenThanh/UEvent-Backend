@@ -12,7 +12,7 @@ services:
       - OTEL_ENABLED=true
       - OTEL_SERVICE_NAME=uevent-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
-    command: ["./entrypoint.sh"]
+    command: ["/bin/sh", "/app/entrypoint.sh"]
     ports:
       - "8000:8000"
     volumes:
