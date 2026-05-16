@@ -11,6 +11,7 @@ class UserAuthIdentity(BaseModel):
         FACEBOOK = "facebook", "Facebook"
         GITHUB = "github", "GitHub"
         PASSKEY = "passkey", "Passkey"
+        KEYCLOAK = "keycloak", "Keycloak"
 
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="auth_identities")
     provider = models.CharField(max_length=20, choices=Provider.choices)

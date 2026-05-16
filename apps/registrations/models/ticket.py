@@ -38,5 +38,3 @@ class Ticket(BaseModel):
         return cls.objects.select_for_update().select_related("registration", "registration__event").get(
             ticket_code=ticket_code
         )
-
-

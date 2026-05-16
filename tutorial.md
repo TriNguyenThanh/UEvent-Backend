@@ -19,7 +19,7 @@ Init project
 python -m venv venv
 source venv/bin/activate
 
-pip install django djangorestframework psycopg2-binary python-dotenv
+pip install -r requirements.txt
 
 django-admin startproject config .
 mkdir apps common
@@ -283,6 +283,18 @@ services:
 # 9. CI (GitHub Actions)
 
 ## `.github/workflows/ci.yml`
+
+```
+[ Developer ]
+      |
+      +-- (Push Feature) ----> [ CI: Lint & Unit Test ] (Phản hồi nhanh)
+      |
+      +-- (Open PR) ---------> [ CI: Security Scan + Full Test ] (Cổng gác)
+      |                              |
+      |                          (Approved)
+      |                              |
+      +-- (Merge Main) --------> [ CI/CD: Build Image + Scan Image + Deploy ] (Phát hành)
+```
 
 ```yaml
 name: Django CI
