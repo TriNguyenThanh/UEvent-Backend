@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 
 from apps.events.models import Event
+from apps.events.services import assert_event_organizer, is_event_organizer
 from apps.registrations.models import EventRegistration, Ticket
 from apps.registrations.serializers import (
     RegistrationCancelSerializer,
@@ -30,19 +31,6 @@ REGISTRATION_ERROR_RESPONSES = {
     404: ApiErrorResponseSerializer(),
     409: ApiErrorResponseSerializer(),
 }
-
-
-def is_event_organizer(user, event):
-    if not user or not user.is_authenticated:
-        return False
-    if event.created_by_id == user.id:
-        return True
-    return event.organizers.filter(user=user).exists()
-
-
-def assert_event_organizer(request, event):
-    if not is_event_organizer(request.user, event):
-        raise PermissionDenied("You do not have organizer access to this event.")
 
 
 class MyRegistrationListView(generics.ListAPIView):
@@ -88,7 +76,7 @@ class EventRegistrationListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):  # type: ignore[override]
         event = self.get_event()
         if self.request.method == "GET":
-            assert_event_organizer(self.request, event)
+            assert_event_organizer(self.request.user, event)
         return (
             EventRegistration.objects.filter(event=event)
             .select_related("event", "user", "ticket")
@@ -142,7 +130,7 @@ class EventRegistrationDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):  # type: ignore[override]
         event = get_object_or_404(Event.objects.prefetch_related("organizers"), id=self.kwargs["event_id"])
-        assert_event_organizer(self.request, event)
+        assert_event_organizer(self.request.user, event)
         return EventRegistration.objects.filter(event=event).select_related("event", "user", "ticket")
 
     @swagger_auto_schema(
@@ -186,7 +174,7 @@ class OrganizerRegistrationCancelView(APIView):
     )
     def patch(self, request, event_id, registration_id):
         event = get_object_or_404(Event.objects.prefetch_related("organizers"), id=event_id)
-        assert_event_organizer(request, event)
+        assert_event_organizer(request.user, event)
         serializer = RegistrationCancelSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         registration = get_object_or_404(
