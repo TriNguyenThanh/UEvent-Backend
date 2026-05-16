@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import base64
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from urllib import error, request
 
@@ -21,6 +23,9 @@ class OpenSearchAuditQuery:
 
     filters: dict[str, Any]
     size: int = 50
+    date_from: datetime | None = None
+    date_to: datetime | None = None
+    from_: int = 0
 
 
 class OpenSearchAuditClient:
@@ -36,22 +41,30 @@ class OpenSearchAuditClient:
         "system_module",
         "trace_id",
         "level",
+        "status",
     }
 
     def __init__(self, *, base_url: str | None = None, index: str | None = None, timeout: int | None = None):
         self.base_url = (base_url or getattr(settings, "OPENSEARCH_URL", "http://localhost:9200")).rstrip("/")
         self.index = index or getattr(settings, "OPENSEARCH_AUDIT_INDEX", self.DEFAULT_INDEX)
         self.timeout = timeout or getattr(settings, "OPENSEARCH_TIMEOUT_SECONDS", self.DEFAULT_TIMEOUT_SECONDS)
+        self.username = getattr(settings, "OPENSEARCH_USERNAME", "")
+        self.password = getattr(settings, "OPENSEARCH_PASSWORD", "")
 
     def search(self, query: OpenSearchAuditQuery) -> dict[str, Any]:
         self._validate_filters(query.filters)
         body = self._build_body(query)
         url = f"{self.base_url}/{self.index}/_search"
         payload = json.dumps(body).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        if self.username and self.password:
+            token = base64.b64encode(f"{self.username}:{self.password}".encode("utf-8")).decode("ascii")
+            headers["Authorization"] = f"Basic {token}"
+
         req = request.Request(
             url,
             data=payload,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             method="POST",
         )
 
@@ -80,7 +93,26 @@ class OpenSearchAuditClient:
             if value not in (None, "")
         ]
         return {
+            "from": query.from_,
             "size": query.size,
-            "sort": [{"timestamp": {"order": "desc"}}],
-            "query": {"bool": {"filter": filters}} if filters else {"match_all": {}},
+            "sort": [{"event_time": {"order": "desc", "unmapped_type": "date"}}],
+            "query": {
+                "bool": {
+                    "filter": [
+                        *filters,
+                        *OpenSearchAuditClient._build_date_filters(query),
+                    ]
+                }
+            }
+            if filters or query.date_from or query.date_to
+            else {"match_all": {}},
         }
+
+    @staticmethod
+    def _build_date_filters(query: OpenSearchAuditQuery) -> list[dict[str, Any]]:
+        range_filter: dict[str, str] = {}
+        if query.date_from:
+            range_filter["gte"] = query.date_from.isoformat()
+        if query.date_to:
+            range_filter["lte"] = query.date_to.isoformat()
+        return [{"range": {"event_time": range_filter}}] if range_filter else []

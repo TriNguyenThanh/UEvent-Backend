@@ -87,3 +87,35 @@ class AdminNotificationListEnvelopeResponseSerializer(PaginatedApiResponseSerial
 
 class AdminNotificationStatisticsEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
     """Envelope response cho admin notification statistics."""
+
+
+class AdminSettingsEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin settings."""
+
+
+class AdminAuditListEnvelopeResponseSerializer(PaginatedApiResponseSerializer):
+    """Envelope response cho admin audit log list."""
+
+
+class AdminAuditSummaryEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin audit summary."""
+
+
+class AdminDashboardOverviewEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin dashboard overview."""
+
+
+class AdminDashboardStatsEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin dashboard stats."""
+
+
+class AdminDashboardGrowthEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin dashboard growth."""
+
+
+class AdminDashboardQueueEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin dashboard queue."""
+
+
+class AdminDashboardAuditSummaryEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin dashboard audit summary."""

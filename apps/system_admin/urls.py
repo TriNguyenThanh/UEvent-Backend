@@ -1,6 +1,16 @@
 from django.urls import path
 
-from .views import auth_views, user_views, category_views, event_views, support_views, notification_views
+from .views import (
+    audit_views,
+    auth_views,
+    category_views,
+    dashboard_views,
+    event_views,
+    notification_views,
+    settings_views,
+    support_views,
+    user_views,
+)
 
 app_name = "system_admin"
 
@@ -53,4 +63,19 @@ urlpatterns = [
     path("notifications/export/", notification_views.AdminNotificationExportView.as_view(), name="notification-export"),
     path("notifications/<uuid:pk>/", notification_views.AdminNotificationDetailUpdateDeleteView.as_view(), name="notification-detail"),
     path("notifications/<uuid:pk>/publish/", notification_views.AdminNotificationPublishView.as_view(), name="notification-publish"),
+
+    # Settings
+    path("settings/", settings_views.AdminSettingsView.as_view(), name="settings"),
+
+    # Audit Logs
+    path("audit-logs/", audit_views.AdminAuditLogListView.as_view(), name="audit-log-list"),
+    path("audit-logs/export/", audit_views.AdminAuditLogExportView.as_view(), name="audit-log-export"),
+    path("audit-logs/summary/", audit_views.AdminAuditSummaryView.as_view(), name="audit-log-summary"),
+
+    # Dashboard
+    path("dashboard/overview/", dashboard_views.AdminDashboardOverviewView.as_view(), name="dashboard-overview"),
+    path("dashboard/stats/", dashboard_views.AdminDashboardStatsView.as_view(), name="dashboard-stats"),
+    path("dashboard/growth/", dashboard_views.AdminDashboardGrowthView.as_view(), name="dashboard-growth"),
+    path("dashboard/queues/", dashboard_views.AdminDashboardQueueView.as_view(), name="dashboard-queues"),
+    path("dashboard/audit-summary/", dashboard_views.AdminDashboardAuditSummaryView.as_view(), name="dashboard-audit-summary"),
 ]
