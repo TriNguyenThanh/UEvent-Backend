@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.support',
     'apps.app_settings',
     'apps.system_admin',
+    'apps.utils',
 ]
 
 MIDDLEWARE = [
