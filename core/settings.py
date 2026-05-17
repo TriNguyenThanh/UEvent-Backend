@@ -35,7 +35,8 @@ CORS_ALLOWED_HEADERS = [
 ]
 CORS_ALLOW_CREDENTIALS = env.bool('CORS_ALLOW_CREDENTIALS', default=True)
 CORS_PREFLIGHT_MAX_AGE = env.int('CORS_PREFLIGHT_MAX_AGE', default=86400)
-USE_SQLITE = env.bool('USE_SQLITE', default=env.bool('CI', default=False))
+CI = env.bool('CI', default=False)
+USE_SQLITE = env.bool('USE_SQLITE', default=CI)
 
 
 
@@ -209,16 +210,25 @@ OTP_MAX_ATTEMPTS = env.int('OTP_MAX_ATTEMPTS', default=5)   # Khóa sau 5 lần 
 OTP_COOLDOWN_SECONDS = env.int('OTP_COOLDOWN_SECONDS', default=60)  # Chờ 60s trước khi gửi lại
 
 # ── Cache (Redis) ──
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': env('REDIS_URL', default='redis://redis:6379/0'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'TIMEOUT': 300,  # default TTL 5 phút (override bằng cache.set timeout)
+if CI or USE_SQLITE:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'uevent-ci-cache',
+            'TIMEOUT': 300,
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': env('REDIS_URL', default='redis://redis:6379/0'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'TIMEOUT': 300,  # default TTL 5 phút (override bằng cache.set timeout)
+        }
+    }
 
 
 LOGGING = {
