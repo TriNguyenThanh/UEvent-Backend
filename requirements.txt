@@ -17,3 +17,6 @@ opentelemetry-exporter-otlp
 python-json-logger
 openpyxl
 Deprecated
+celery
+redis
+firebase-admin

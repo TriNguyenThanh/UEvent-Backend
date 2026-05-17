@@ -17,6 +17,7 @@ class AdminNotificationListOutputSerializer(serializers.ModelSerializer):
     sent_count = serializers.IntegerField(read_only=True)
     read_count = serializers.IntegerField(read_only=True)
     failed_count = serializers.IntegerField(read_only=True)
+    queued_count = serializers.IntegerField(read_only=True)
     open_rate = serializers.SerializerMethodField()
 
     class Meta:
@@ -35,6 +36,7 @@ class AdminNotificationListOutputSerializer(serializers.ModelSerializer):
             "sent_count",
             "read_count",
             "failed_count",
+            "queued_count",
             "open_rate",
             "created_at",
             "updated_at",
@@ -57,9 +59,11 @@ class AdminNotificationDetailOutputSerializer(AdminNotificationListOutputSeriali
         sent_count = getattr(obj, "sent_count", 0) or 0
         read_count = getattr(obj, "read_count", 0) or 0
         failed_count = getattr(obj, "failed_count", 0) or 0
+        queued_count = getattr(obj, "queued_count", 0) or 0
 
         return {
             "recipient_count": recipient_count,
+            "queued_count": queued_count,
             "sent_count": sent_count,
             "read_count": read_count,
             "failed_count": failed_count,
