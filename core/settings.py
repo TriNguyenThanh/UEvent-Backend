@@ -35,7 +35,8 @@ CORS_ALLOWED_HEADERS = [
 ]
 CORS_ALLOW_CREDENTIALS = env.bool('CORS_ALLOW_CREDENTIALS', default=True)
 CORS_PREFLIGHT_MAX_AGE = env.int('CORS_PREFLIGHT_MAX_AGE', default=86400)
-USE_SQLITE = env.bool('USE_SQLITE', default=env.bool('CI', default=False))
+CI = env.bool('CI', default=False)
+USE_SQLITE = env.bool('USE_SQLITE', default=CI)
 
 
 
@@ -179,6 +180,21 @@ OPENSEARCH_URL = env('OPENSEARCH_URL', default='http://localhost:9200')
 OPENSEARCH_AUDIT_INDEX = env('OPENSEARCH_AUDIT_INDEX', default='uevent-audit-*')
 OPENSEARCH_TIMEOUT_SECONDS = env.int('OPENSEARCH_TIMEOUT_SECONDS', default=5)
 
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default='redis://localhost:6379/1')
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = env.int('CELERY_TASK_TIME_LIMIT', default=300)
+CELERY_TASK_ALWAYS_EAGER = env.bool('CELERY_TASK_ALWAYS_EAGER', default=False)
+CELERY_TASK_EAGER_PROPAGATES = env.bool('CELERY_TASK_EAGER_PROPAGATES', default=True)
+
+FCM_ENABLED = env.bool('FCM_ENABLED', default=False)
+FCM_DRY_RUN = env.bool('FCM_DRY_RUN', default=False)
+FIREBASE_CREDENTIALS_PATH = env('FIREBASE_CREDENTIALS_PATH', default='')
+FIREBASE_CREDENTIALS_JSON = env('FIREBASE_CREDENTIALS_JSON', default='')
+FCM_BATCH_SIZE = env.int('FCM_BATCH_SIZE', default=500)
+FCM_MAX_RETRIES = env.int('FCM_MAX_RETRIES', default=3)
+FCM_DEVICE_TOKEN_TTL_DAYS = env.int('FCM_DEVICE_TOKEN_TTL_DAYS', default=365)
+
 # ── Email (SMTP) ──
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
@@ -194,16 +210,25 @@ OTP_MAX_ATTEMPTS = env.int('OTP_MAX_ATTEMPTS', default=5)   # Khóa sau 5 lần 
 OTP_COOLDOWN_SECONDS = env.int('OTP_COOLDOWN_SECONDS', default=60)  # Chờ 60s trước khi gửi lại
 
 # ── Cache (Redis) ──
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': env('REDIS_URL', default='redis://redis:6379/0'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'TIMEOUT': 300,  # default TTL 5 phút (override bằng cache.set timeout)
+if CI or USE_SQLITE:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'uevent-ci-cache',
+            'TIMEOUT': 300,
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': env('REDIS_URL', default='redis://redis:6379/0'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'TIMEOUT': 300,  # default TTL 5 phút (override bằng cache.set timeout)
+        }
+    }
 
 
 LOGGING = {

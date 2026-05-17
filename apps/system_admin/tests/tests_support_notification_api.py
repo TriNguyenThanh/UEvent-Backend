@@ -195,6 +195,12 @@ class AdminSupportNotificationApiTests(TestCase):
         self.assert_success_envelope(publish_response)
         self.assertEqual(publish_response.data["data"]["status"], Notification.NotificationStatus.SENT)
         self.assertTrue(NotificationRecipient.objects.filter(notification_id=notification_id).exists())
+        self.assertTrue(
+            NotificationRecipient.objects.filter(
+                notification_id=notification_id,
+                delivery_status=NotificationRecipient.DeliveryStatus.QUEUED,
+            ).exists()
+        )
 
         blocked_patch = self.client.patch(
             reverse("system_admin:notification-detail", kwargs={"pk": notification_id}),
@@ -318,6 +324,12 @@ class AdminSupportNotificationApiTests(TestCase):
         self.assertEqual(due_notification.status, Notification.NotificationStatus.SENT)
         self.assertIsNotNone(due_notification.sent_at)
         self.assertTrue(NotificationRecipient.objects.filter(notification=due_notification).exists())
+        self.assertTrue(
+            NotificationRecipient.objects.filter(
+                notification=due_notification,
+                delivery_status=NotificationRecipient.DeliveryStatus.QUEUED,
+            ).exists()
+        )
         self.assertEqual(future_notification.status, Notification.NotificationStatus.SCHEDULED)
         self.assertFalse(NotificationRecipient.objects.filter(notification=future_notification).exists())
 

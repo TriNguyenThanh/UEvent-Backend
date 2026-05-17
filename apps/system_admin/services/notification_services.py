@@ -44,6 +44,11 @@ class AdminNotificationService:
                     filter=Q(recipients__delivery_status=NotificationRecipient.DeliveryStatus.FAILED),
                     distinct=True,
                 ),
+                queued_count=Count(
+                    "recipients",
+                    filter=Q(recipients__delivery_status=NotificationRecipient.DeliveryStatus.QUEUED),
+                    distinct=True,
+                ),
             )
         )
 
@@ -231,8 +236,7 @@ class AdminNotificationService:
                 NotificationRecipient(
                     notification=notification,
                     user=user,
-                    delivery_status=NotificationRecipient.DeliveryStatus.SENT,
-                    delivered_at=now,
+                    delivery_status=NotificationRecipient.DeliveryStatus.QUEUED,
                 )
                 for user in users
             ],
@@ -244,18 +248,26 @@ class AdminNotificationService:
         notification.sent_at = now
         notification.save(update_fields=["status", "sent_at", "updated_at"])
 
+        transaction.on_commit(lambda: AdminNotificationService._enqueue_delivery(notification.pk))
+
         AdminNotificationService._log_audit(
             action=audit_action,
             actor=actor,
             notification=notification,
             metadata={
                 "previous_status": previous_status,
-                "recipient_count": len(users),
+                "queued_recipient_count": len(users),
                 "audience_type": notification.audience_type,
                 "scheduled_at": notification.scheduled_at.isoformat() if notification.scheduled_at else None,
             },
         )
         return AdminNotificationService.get_notification(notification.pk)
+
+    @staticmethod
+    def _enqueue_delivery(notification_id) -> None:
+        from apps.notifications.tasks import deliver_notification
+
+        deliver_notification.delay(str(notification_id))
 
     @staticmethod
     def publish_due_scheduled_notifications(*, actor=None, batch_size: int = 100, now=None) -> dict:
@@ -335,6 +347,7 @@ class AdminNotificationService:
             "audience_type",
             "status",
             "recipient_count",
+            "queued_count",
             "sent_count",
             "read_count",
             "failed_count",
@@ -358,6 +371,7 @@ class AdminNotificationService:
                     "audience_type": notification.audience_type,
                     "status": notification.status,
                     "recipient_count": getattr(notification, "recipient_count", 0),
+                    "queued_count": getattr(notification, "queued_count", 0),
                     "sent_count": getattr(notification, "sent_count", 0),
                     "read_count": getattr(notification, "read_count", 0),
                     "failed_count": getattr(notification, "failed_count", 0),

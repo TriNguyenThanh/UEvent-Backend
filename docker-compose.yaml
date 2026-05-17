@@ -12,12 +12,15 @@ services:
       - OTEL_ENABLED=true
       - OTEL_SERVICE_NAME=uevent-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
     command: ["/bin/sh", "/app/entrypoint.sh"]
     ports:
       - "8000:8000"
     volumes:
       - .:/app
       - app_logs:/app/logs
+      - ./firebase-service-account.json:/run/firebase-service-account.json:ro
     depends_on:
       db:
         condition: service_healthy
@@ -41,6 +44,8 @@ services:
       - OTEL_ENABLED=true
       - OTEL_SERVICE_NAME=uevent-notification-scheduler
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
     command:
       - /bin/sh
       - -c
@@ -62,6 +67,36 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - backend
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uevent_celery_worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - OTEL_ENABLED=true
+      - OTEL_SERVICE_NAME=uevent-celery-worker
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+    command: ["celery", "-A", "core", "worker", "--loglevel=INFO"]
+    volumes:
+      - .:/app
+      - app_logs:/app/logs
+      - ./firebase-service-account.json:/run/firebase-service-account.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
       jaeger:
         condition: service_started
     networks:
@@ -161,17 +196,6 @@ services:
       - opensearch
     networks:
       - backend
-
-  adminer:
-    image: adminer:latest
-    container_name: adminer_client
-    restart: always
-    ports:
-      - "8080:8080"
-    networks:
-      - backend
-    depends_on:
-      - db
 
 volumes:
   postgres_data:

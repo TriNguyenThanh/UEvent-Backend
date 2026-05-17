@@ -207,5 +207,5 @@ class AdminNotificationPublishView(APIView):
         )
         return success_response(
             data=AdminNotificationDetailOutputSerializer(notification).data,
-            message="Gửi thông báo thành công.",
+            message="Đã xếp hàng gửi thông báo.",
         )
