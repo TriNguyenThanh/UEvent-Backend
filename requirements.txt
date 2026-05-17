@@ -17,3 +17,4 @@ opentelemetry-exporter-otlp
 python-json-logger
 openpyxl
 Deprecated
+django-redis
