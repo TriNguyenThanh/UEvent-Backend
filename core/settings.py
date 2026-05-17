@@ -143,6 +143,12 @@ KEYCLOAK_JWKS_TIMEOUT = env.int('KEYCLOAK_JWKS_TIMEOUT', default=5)
 KEYCLOAK_TOKEN_TIMEOUT = env.int('KEYCLOAK_TOKEN_TIMEOUT', default=10)
 KEYCLOAK_JWT_ALGORITHMS = env.list('KEYCLOAK_JWT_ALGORITHMS', default=['RS256'])
 
+# Keycloak Admin API (dùng cho OTP Email Login — Token Exchange)
+KEYCLOAK_ADMIN_CLIENT_ID = env('KEYCLOAK_ADMIN_CLIENT_ID', default='uevent-backend')
+KEYCLOAK_ADMIN_CLIENT_SECRET = env('KEYCLOAK_ADMIN_CLIENT_SECRET', default='')
+KEYCLOAK_TOKEN_URL = f"{KEYCLOAK_ISSUER}/protocol/openid-connect/token"
+KEYCLOAK_ADMIN_API_URL = f"{KEYCLOAK_SERVER_URL}/admin/realms/{KEYCLOAK_REALM}"
+
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'common.exceptions.custom_exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -187,6 +193,32 @@ FIREBASE_CREDENTIALS_JSON = env('FIREBASE_CREDENTIALS_JSON', default='')
 FCM_BATCH_SIZE = env.int('FCM_BATCH_SIZE', default=500)
 FCM_MAX_RETRIES = env.int('FCM_MAX_RETRIES', default=3)
 FCM_DEVICE_TOKEN_TTL_DAYS = env.int('FCM_DEVICE_TOKEN_TTL_DAYS', default=365)
+
+# ── Email (SMTP) ──
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='UEvent <noreply@uevent.app>')
+
+# ── OTP ──
+OTP_TTL_SECONDS = env.int('OTP_TTL_SECONDS', default=180)   # 3 phút
+OTP_MAX_ATTEMPTS = env.int('OTP_MAX_ATTEMPTS', default=5)   # Khóa sau 5 lần sai
+OTP_COOLDOWN_SECONDS = env.int('OTP_COOLDOWN_SECONDS', default=60)  # Chờ 60s trước khi gửi lại
+
+# ── Cache (Redis) ──
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': env('REDIS_URL', default='redis://redis:6379/0'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'TIMEOUT': 300,  # default TTL 5 phút (override bằng cache.set timeout)
+    }
+}
 
 
 LOGGING = {

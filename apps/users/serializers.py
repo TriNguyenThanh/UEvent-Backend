@@ -6,6 +6,7 @@ class UserProfileOutputSerializer(serializers.ModelSerializer):
     """Output serializer for mobile user profile — matches Flutter UserModel."""
 
     primary_role = serializers.SerializerMethodField()
+    is_profile_complete = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -15,6 +16,7 @@ class UserProfileOutputSerializer(serializers.ModelSerializer):
             "full_name",
             "account_status",
             "primary_role",
+            "is_profile_complete",
             "phone_number",
             "student_code",
             "faculty",
@@ -27,6 +29,15 @@ class UserProfileOutputSerializer(serializers.ModelSerializer):
         if primary:
             return primary.role.code
         return "student"
+
+    def get_is_profile_complete(self, obj) -> bool:
+        """
+        Profile được coi là đầy đủ khi user đã điền đủ 3 trường bắt buộc:
+        - full_name: tên hiển thị
+        - student_code: mã số sinh viên
+        - faculty: khoa / đơn vị
+        """
+        return bool(obj.full_name and obj.student_code and obj.faculty)
 
 
 class UpdateProfileInputSerializer(serializers.Serializer):

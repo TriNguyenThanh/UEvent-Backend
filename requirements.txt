@@ -20,3 +20,4 @@ Deprecated
 celery
 redis
 firebase-admin
+django-redis
