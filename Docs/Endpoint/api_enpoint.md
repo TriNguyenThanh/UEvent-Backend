@@ -162,9 +162,8 @@ Ví dụ thiết lập hệ thống:
 
 | Module       | Endpoint chính                      |
 | ------------ | ----------------------------------- |
-| Auth         | `/auth/*`                           |
-| User         | `/users/*`                          |
-| Security     | `/security/*`                       |
+| Auth         | (Chuyển sang Keycloak)              |
+| User         | `/users/*` và `/auth/profile`       |
 | Organization | `/organizations/*`                  |
 | Event        | `/events/*`                         |
 | Category     | `/event-categories/*`               |
@@ -187,10 +186,8 @@ Nếu làm project demo, có thể ưu tiên các API sau:
 
 | Mức ưu tiên | Endpoint                                  |
 | ----------- | ----------------------------------------- |
-| Cao         | `/auth/register`                          |
-| Cao         | `/auth/login`                             |
-| Cao         | `/auth/google`                            |
-| Cao         | `/users/me`                               |
+| Cao         | (Auth Login/Register qua Keycloak)        |
+| Cao         | `/auth/profile`                           |
 | Cao         | `/events`                                 |
 | Cao         | `/events/{eventId}`                       |
 | Cao         | `/events/{eventId}/registrations`         |
@@ -202,15 +199,13 @@ Nếu làm project demo, có thể ưu tiên các API sau:
 | Trung bình  | `/notifications/me`                       |
 | Trung bình  | `/events/{eventId}/exports/google-sheets` |
 | Sau cùng    | `/admin/*`                                |
-| Sau cùng    | `/security/passkeys/*`                    |
 | Sau cùng    | `/events/{eventId}/calendar/*`            |
 
 ---
 
 Nếu cần rút gọn cho báo cáo, hệ thống có thể chia thành **8 nhóm API chính**:
 
-1. API xác thực tài khoản
-2. API quản lý người dùng
+1. API quản lý người dùng (Django) và Xác thực (Keycloak)
 3. API quản lý tổ chức/câu lạc bộ
 4. API quản lý sự kiện
 5. API đăng ký và vé QR
