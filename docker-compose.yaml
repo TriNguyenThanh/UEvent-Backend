@@ -197,17 +197,6 @@ services:
     networks:
       - backend
 
-  adminer:
-    image: adminer:latest
-    container_name: adminer_client
-    restart: always
-    ports:
-      - "8080:8080"
-    networks:
-      - backend
-    depends_on:
-      - db
-
 volumes:
   postgres_data:
     driver: local
