@@ -21,3 +21,4 @@ celery
 redis
 firebase-admin
 django-redis
+google-auth
