@@ -9,6 +9,8 @@ services:
       - .env
     environment:
       - DJANGO_SETTINGS_MODULE=core.settings
+      - HOST=db
+      - PORT=5432
       - OTEL_ENABLED=true
       - OTEL_SERVICE_NAME=uevent-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
@@ -41,6 +43,8 @@ services:
       - .env
     environment:
       - DJANGO_SETTINGS_MODULE=core.settings
+      - HOST=db
+      - PORT=5432
       - OTEL_ENABLED=true
       - OTEL_SERVICE_NAME=uevent-notification-scheduler
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces

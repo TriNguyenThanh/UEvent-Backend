@@ -65,7 +65,7 @@ class EventFeedbackListCreateView(generics.ListCreateAPIView):
         operation_summary="List Event Feedbacks",
         operation_description="Organizer xem danh sách feedback của sự kiện.",
         responses={200: EventFeedbackSerializer(many=True), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Feedbacks"],
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -75,7 +75,7 @@ class EventFeedbackListCreateView(generics.ListCreateAPIView):
         operation_description="User gửi feedback sau sự kiện.",
         request_body=EventFeedbackSerializer,
         responses={201: EventFeedbackSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Feedbacks"],
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
@@ -96,7 +96,7 @@ class EventFeedbackSummaryView(APIView):
         operation_summary="Get Feedback Summary",
         operation_description="Organizer xem thống kê rating của feedback trong sự kiện.",
         responses={200: openapi.Response(description="Feedback summary"), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Feedbacks"],
     )
     def get(self, request, event_id):
         event = get_object_or_404(Event.objects.prefetch_related("organizers"), id=event_id)
@@ -126,7 +126,7 @@ class FeedbackDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_summary="Get Feedback Detail",
         operation_description="Lấy chi tiết feedback theo id.",
         responses={200: EventFeedbackSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Feedbacks"],
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -136,7 +136,7 @@ class FeedbackDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_description="Cập nhật feedback (chỉ owner).",
         request_body=EventFeedbackSerializer,
         responses={200: EventFeedbackSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Feedbacks"],
     )
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
@@ -146,7 +146,7 @@ class FeedbackDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_description="Cập nhật toàn bộ feedback (PUT, chỉ owner).",
         request_body=EventFeedbackSerializer,
         responses={200: EventFeedbackSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Feedbacks"],
     )
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
@@ -155,7 +155,7 @@ class FeedbackDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_summary="Delete Feedback",
         operation_description="Xóa feedback (chỉ owner).",
         responses={204: openapi.Response(description="Xóa feedback thành công."), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Feedbacks"],
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
@@ -191,7 +191,7 @@ class EventQuestionListCreateView(generics.ListCreateAPIView):
         operation_summary="List Event Questions",
         operation_description="Organizer xem danh sách câu hỏi của sự kiện.",
         responses={200: EventQuestionSerializer(many=True), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -201,7 +201,7 @@ class EventQuestionListCreateView(generics.ListCreateAPIView):
         operation_description="User gửi câu hỏi cho BTC.",
         request_body=EventQuestionSerializer,
         responses={201: EventQuestionSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
@@ -228,7 +228,7 @@ class EventPublicQuestionListView(generics.ListAPIView):
         operation_summary="List Public Event Questions",
         operation_description="User xem danh sách câu hỏi đang hiển thị công khai.",
         responses={200: EventQuestionSerializer(many=True), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -252,7 +252,7 @@ class QuestionDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_summary="Get Question Detail",
         operation_description="Lấy chi tiết câu hỏi theo id.",
         responses={200: EventQuestionSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -262,7 +262,7 @@ class QuestionDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_description="Cập nhật câu hỏi (chỉ owner).",
         request_body=EventQuestionSerializer,
         responses={200: EventQuestionSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
@@ -272,7 +272,7 @@ class QuestionDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_description="Cập nhật toàn bộ câu hỏi (PUT, chỉ owner).",
         request_body=EventQuestionSerializer,
         responses={200: EventQuestionSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
@@ -281,7 +281,7 @@ class QuestionDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_summary="Delete Question",
         operation_description="Xóa câu hỏi (chỉ owner).",
         responses={204: openapi.Response(description="Xóa câu hỏi thành công."), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
@@ -298,7 +298,7 @@ class QuestionAnswerView(APIView):
         operation_description="Organizer trả lời câu hỏi.",
         request_body=QuestionAnswerSerializer,
         responses={200: EventQuestionSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def patch(self, request, question_id):
         question = get_object_or_404(
@@ -322,7 +322,7 @@ class QuestionPinView(APIView):
         operation_summary="Pin Question",
         operation_description="Organizer ghim câu hỏi.",
         responses={200: EventQuestionSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def patch(self, request, question_id):
         question = get_object_or_404(EventQuestion.objects.select_related("event", "user"), id=question_id)
@@ -339,7 +339,7 @@ class QuestionHideView(APIView):
         operation_summary="Hide Question",
         operation_description="Organizer ẩn câu hỏi khỏi danh sách public.",
         responses={200: EventQuestionSerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Interactions"],
+        tags=["Questions"],
     )
     def patch(self, request, question_id):
         question = get_object_or_404(EventQuestion.objects.select_related("event", "user"), id=question_id)
