@@ -27,6 +27,16 @@ class KeycloakProvisioningServiceTests(TestCase):
             name="Student",
             is_active=True,
         )
+        self.organizer_role = Role.objects.create(
+            code="organizer",
+            name="Organizer",
+            is_active=True,
+        )
+        self.system_admin_role = Role.objects.create(
+            code="system_admin",
+            name="System Admin",
+            is_active=True,
+        )
         self.User = get_user_model()
 
     def payload(self, **overrides):
@@ -62,6 +72,30 @@ class KeycloakProvisioningServiceTests(TestCase):
                 is_primary=True,
             ).exists()
         )
+
+    def test_syncs_user_roles_from_keycloak_realm_roles(self):
+        user = KeycloakProvisioningService.provision_from_payload(
+            self.payload(
+                realm_access={
+                    "roles": [
+                        "student",
+                        "organizer",
+                        "super_admin",
+                        "offline_access",
+                        "uma_authorization",
+                        "default-roles-uevent",
+                    ]
+                }
+            )
+        )
+        user.refresh_from_db()
+
+        role_codes = set(
+            UserRole.objects.filter(user=user).values_list("role__code", flat=True)
+        )
+        self.assertEqual(role_codes, {"student", "organizer", "system_admin"})
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
 
     def test_rejects_unverified_email_without_creating_user(self):
         with self.assertRaises(AuthenticationFailed):

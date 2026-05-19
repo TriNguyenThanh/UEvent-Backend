@@ -32,6 +32,12 @@ class KeycloakProvisioningService:
     """Provision and sync local users from validated Keycloak JWT payloads."""
 
     DEFAULT_ROLE_CODE = "student"
+    REALM_ROLE_CODE_MAP = {
+        "student": ("student", "ATTENDEE"),
+        "organizer": ("organizer", "ORGANIZER"),
+        "super_admin": ("system_admin", "SYS_ADMIN", "admin"),
+    }
+    SUPER_ADMIN_REALM_ROLE = "super_admin"
 
     @classmethod
     def provision_from_payload(cls, payload: dict[str, Any]):
@@ -79,7 +85,7 @@ class KeycloakProvisioningService:
                 full_name=full_name,
                 avatar_url=avatar_url,
             )
-            cls.ensure_default_student_role(user)
+            cls.sync_roles_from_payload(user=user, payload=payload)
             cls._sync_identity(identity)
 
         return user
@@ -106,6 +112,94 @@ class KeycloakProvisioningService:
             return
 
         UserRole.objects.create(user=user, role=role, is_primary=True)
+
+    @classmethod
+    def sync_roles_from_payload(cls, *, user, payload: dict[str, Any]) -> None:
+        realm_roles = cls._extract_realm_roles(payload)
+        role_codes = cls._map_realm_roles_to_local_codes(realm_roles)
+
+        if role_codes:
+            cls._ensure_user_roles(user=user, role_codes=role_codes)
+        else:
+            cls.ensure_default_student_role(user)
+
+        if cls.SUPER_ADMIN_REALM_ROLE in realm_roles:
+            cls._ensure_superuser_flags(user)
+
+    @staticmethod
+    def _extract_realm_roles(payload: dict[str, Any]) -> set[str]:
+        realm_access = payload.get("realm_access")
+        if not isinstance(realm_access, dict):
+            return set()
+
+        roles = realm_access.get("roles")
+        if not isinstance(roles, list):
+            return set()
+
+        return {str(role).strip() for role in roles if str(role).strip()}
+
+    @classmethod
+    def _map_realm_roles_to_local_codes(cls, realm_roles: set[str]) -> list[str]:
+        role_codes = []
+        seen = set()
+
+        for realm_role, candidates in cls.REALM_ROLE_CODE_MAP.items():
+            if realm_role not in realm_roles:
+                continue
+
+            role = None
+            for candidate in candidates:
+                role = Role.objects.filter(code=candidate, is_active=True).first()
+                if role is not None:
+                    break
+            if role is not None and role.code not in seen:
+                role_codes.append(role.code)
+                seen.add(role.code)
+
+        return role_codes
+
+    @staticmethod
+    def _ensure_user_roles(*, user, role_codes: list[str]) -> None:
+        existing_roles = {
+            user_role.role.code: user_role
+            for user_role in UserRole.all_objects.select_for_update()
+            .select_related("role")
+            .filter(user=user, role__code__in=role_codes)
+        }
+        has_primary_role = UserRole.objects.filter(user=user, is_primary=True).exists()
+
+        for role_code in role_codes:
+            role = Role.objects.get(code=role_code, is_active=True)
+            user_role = existing_roles.get(role_code)
+            is_primary = not has_primary_role
+
+            if user_role is None:
+                UserRole.objects.create(user=user, role=role, is_primary=is_primary)
+                has_primary_role = True
+                continue
+
+            update_fields = []
+            if user_role.deleted_at is not None:
+                user_role.deleted_at = None
+                update_fields.append("deleted_at")
+            if is_primary and not user_role.is_primary:
+                user_role.is_primary = True
+                update_fields.append("is_primary")
+                has_primary_role = True
+            if update_fields:
+                user_role.save(update_fields=[*update_fields, "updated_at"])
+
+    @staticmethod
+    def _ensure_superuser_flags(user) -> None:
+        update_fields = []
+        if not user.is_superuser:
+            user.is_superuser = True
+            update_fields.append("is_superuser")
+        if not user.is_staff:
+            user.is_staff = True
+            update_fields.append("is_staff")
+        if update_fields:
+            user.save(update_fields=[*update_fields, "updated_at"])
 
     @staticmethod
     def _require_subject(payload: dict[str, Any]) -> str:
