@@ -55,7 +55,14 @@ def _admin_headers(service_token: str) -> Dict[str, str]:
     }
 
 
-def get_or_create_keycloak_user(email: str) -> str:
+def get_or_create_keycloak_user(
+    email: str,
+    *,
+    full_name: str = "",
+    first_name: str = "",
+    last_name: str = "",
+    avatar_url: str = "",
+) -> str:
     """
     Đảm bảo user với email này tồn tại trong Keycloak.
     Trả về Keycloak user ID (UUID string).
@@ -63,9 +70,29 @@ def get_or_create_keycloak_user(email: str) -> str:
     - Nếu user đã tồn tại → trả về ID hiện có.
     - Nếu chưa → tạo mới với emailVerified=True (đã verify qua OTP của chúng ta).
     """
+    email = email.strip().lower()
+    full_name = full_name.strip()
+    first_name = first_name.strip()
+    last_name = last_name.strip()
+    avatar_url = avatar_url.strip()
     service_token = _get_service_account_token()
     headers = _admin_headers(service_token)
     base_url = settings.KEYCLOAK_ADMIN_API_URL
+
+    user_payload = {
+        "email": email,
+        "username": email,
+        "enabled": True,
+        "emailVerified": True,
+    }
+    if first_name:
+        user_payload["firstName"] = first_name
+    if last_name:
+        user_payload["lastName"] = last_name
+    elif full_name:
+        user_payload["firstName"] = full_name
+    if avatar_url:
+        user_payload["attributes"] = {"picture": [avatar_url]}
 
     # 1) Tìm user theo email
     search_response = requests.get(
@@ -82,17 +109,33 @@ def get_or_create_keycloak_user(email: str) -> str:
 
     users = search_response.json()
     if users:
-        return users[0]["id"]
+        user = users[0]
+        keycloak_user_id = user["id"]
+        if (
+            user.get("emailVerified") is not True
+            or user.get("username") != email
+            or user.get("email") != email
+            or user.get("enabled") is not True
+            or (first_name and user.get("firstName") != first_name)
+            or (last_name and user.get("lastName") != last_name)
+        ):
+            update_response = requests.put(
+                f"{base_url}/users/{keycloak_user_id}",
+                json=user_payload,
+                headers=headers,
+                timeout=10,
+            )
+            if update_response.status_code not in (200, 204):
+                raise KeycloakAdminError(
+                    f"Không thể cập nhật user trong Keycloak: {update_response.text}",
+                    status_code=update_response.status_code,
+                )
+        return keycloak_user_id
 
     # 2) Tạo user mới
     create_response = requests.post(
         f"{base_url}/users",
-        json={
-            "email": email,
-            "username": email,  # Keycloak yêu cầu username
-            "enabled": True,
-            "emailVerified": True,  # OTP đã xác nhận email → đánh dấu verified
-        },
+        json=user_payload,
         headers=headers,
         timeout=10,
     )
@@ -121,9 +164,9 @@ def exchange_token_for_user(keycloak_user_id: str) -> Dict[str, Any]:
     - Service Account của client `KEYCLOAK_ADMIN_CLIENT_ID` cần có quyền
       `realm-management` → `impersonation`.
 
-    Lưu ý: KHÔNG gửi `audience` — khi dùng `requested_subject` (impersonation),
-    Keycloak tự issue token dưới requesting client. Gửi sai audience
-    sẽ gây lỗi `unknown_error`.
+    Lưu ý: yêu cầu `refresh_token` để Keycloak trả đủ cả access_token và
+    refresh_token cho mobile app. Nếu yêu cầu access_token, một số bản
+    Keycloak chỉ trả access_token và làm app không tạo được session bền.
 
     Trả về dict chứa: access_token, refresh_token, expires_in, refresh_expires_in.
     """
@@ -138,8 +181,9 @@ def exchange_token_for_user(keycloak_user_id: str) -> Dict[str, Any]:
         "client_secret": settings.KEYCLOAK_ADMIN_CLIENT_SECRET,
         "subject_token": service_token,
         "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
-        "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+        "requested_token_type": "urn:ietf:params:oauth:token-type:refresh_token",
         "requested_subject": keycloak_user_id,
+        "scope": settings.KEYCLOAK_SCOPE,
     }
 
     logger.info(

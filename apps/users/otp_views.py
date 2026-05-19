@@ -6,6 +6,7 @@ POST /api/v1/auth/otp/verify/ → Xác thực OTP → trả Keycloak tokens
 """
 
 from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework import serializers as drf_serializers
@@ -75,7 +76,7 @@ class OtpSendView(APIView):
     def post(self, request):
         serializer = OtpSendInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"]
+        email = serializer.validated_data["email"].strip().lower()
 
         try:
             otp_service.send_otp(email)
@@ -129,7 +130,7 @@ class OtpVerifyView(APIView):
     def post(self, request):
         serializer = OtpVerifyInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"]
+        email = serializer.validated_data["email"].strip().lower()
         code = serializer.validated_data["code"]
 
         # 1) Verify OTP
@@ -158,12 +159,20 @@ class OtpVerifyView(APIView):
         try:
             keycloak_user_id = get_or_create_keycloak_user(email)
             token_data = exchange_token_for_user(keycloak_user_id)
+            KeycloakJWTAuthentication().authenticate_token(token_data["access_token"])
         except KeycloakAdminError as e:
             return error_response(
                 code=ResponseCode.SERVICE_UNAVAILABLE,
                 message="Không thể hoàn tất đăng nhập. Vui lòng thử lại sau.",
                 errors={"detail": str(e)},
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except (AuthenticationFailed, KeyError) as e:
+            return error_response(
+                code=ResponseCode.INVALID_CREDENTIALS,
+                message="Không thể xác thực token sau khi đăng nhập. Vui lòng thử lại.",
+                errors={"detail": str(e)},
+                status_code=status.HTTP_401_UNAUTHORIZED,
             )
 
         # 4) Trả token cho app
