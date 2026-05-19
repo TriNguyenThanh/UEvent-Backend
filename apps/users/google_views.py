@@ -1,3 +1,5 @@
+import logging
+from time import sleep
 from typing import Any
 
 from django.conf import settings
@@ -22,6 +24,8 @@ from common.keycloak_admin import (
 )
 from common.response_codes import ResponseCode
 from common.responses import error_response, success_response
+
+logger = logging.getLogger("django")
 
 
 class GoogleVerifyInputSerializer(drf_serializers.Serializer):
@@ -57,7 +61,9 @@ class GoogleVerifyView(APIView):
         request_body=GoogleVerifyInputSerializer,
         responses={
             200: GoogleTokenOutputSerializer(),
-            400: openapi.Response("Google token không hợp lệ hoặc email chưa xác minh."),
+            400: openapi.Response(
+                "Google token không hợp lệ hoặc email chưa xác minh."
+            ),
             503: openapi.Response("Không thể kết nối Google hoặc Keycloak."),
         },
         tags=["Mobile Auth"],
@@ -67,7 +73,9 @@ class GoogleVerifyView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            google_payload = _verify_google_id_token(serializer.validated_data["id_token"])
+            google_payload = _verify_google_id_token(
+                serializer.validated_data["id_token"]
+            )
         except ValueError as exc:
             return error_response(
                 code=ResponseCode.INVALID_CREDENTIALS,
@@ -99,8 +107,9 @@ class GoogleVerifyView(APIView):
                 last_name=_claim_text(google_payload, "family_name"),
                 avatar_url=_claim_text(google_payload, "picture"),
             )
-            token_data = exchange_token_for_user(keycloak_user_id)
-            user, _ = KeycloakJWTAuthentication().authenticate_token(token_data["access_token"])
+            token_data, user = _exchange_and_authenticate_keycloak_user(
+                keycloak_user_id
+            )
             _link_google_identity(user, google_payload)
         except KeycloakAdminError as exc:
             return error_response(
@@ -133,7 +142,11 @@ class GoogleVerifyView(APIView):
 
 
 def _verify_google_id_token(raw_id_token: str) -> dict[str, Any]:
-    client_ids = [client_id.strip() for client_id in settings.GOOGLE_OAUTH_CLIENT_IDS if client_id.strip()]
+    client_ids = [
+        client_id.strip()
+        for client_id in settings.GOOGLE_OAUTH_CLIENT_IDS
+        if client_id.strip()
+    ]
     if not client_ids:
         raise RuntimeError("GOOGLE_OAUTH_CLIENT_IDS is empty.")
 
@@ -149,7 +162,37 @@ def _verify_google_id_token(raw_id_token: str) -> dict[str, Any]:
         except ValueError as exc:
             last_error = exc
 
-    raise ValueError(str(last_error) if last_error else "Google token audience is not allowed.")
+    raise ValueError(
+        str(last_error) if last_error else "Google token audience is not allowed."
+    )
+
+
+def _exchange_and_authenticate_keycloak_user(keycloak_user_id: str):
+    auth = KeycloakJWTAuthentication()
+    last_error: AuthenticationFailed | None = None
+
+    for attempt in range(2):
+        token_data = exchange_token_for_user(keycloak_user_id)
+        try:
+            user, _ = auth.authenticate_token(token_data["access_token"])
+            return token_data, user
+        except AuthenticationFailed as exc:
+            last_error = exc
+            logger.warning(
+                "Google token exchange produced an access token that failed local authentication "
+                "(attempt %s/2, keycloak_user_id=%s): %s",
+                attempt + 1,
+                keycloak_user_id,
+                exc,
+            )
+            if attempt == 0:
+                sleep(
+                    float(
+                        getattr(settings, "GOOGLE_TOKEN_AUTH_RETRY_DELAY_SECONDS", 0.5)
+                    )
+                )
+
+    raise last_error or AuthenticationFailed("Keycloak access token is invalid.")
 
 
 def _link_google_identity(user, google_payload: dict[str, Any]) -> None:

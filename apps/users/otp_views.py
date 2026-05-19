@@ -23,8 +23,8 @@ from common.keycloak_admin import (
 )
 from common.authentication import KeycloakJWTAuthentication
 
-
 # ── Input Serializers ──────────────────────────────────────────────────────────
+
 
 class OtpSendInputSerializer(drf_serializers.Serializer):
     email = drf_serializers.EmailField()
@@ -37,11 +37,13 @@ class OtpVerifyInputSerializer(drf_serializers.Serializer):
 
 # ── Output Serializer ──────────────────────────────────────────────────────────
 
+
 class OtpTokenOutputSerializer(drf_serializers.Serializer):
     """
     Token response trả về cho app sau khi OTP verify thành công.
     App dùng access_token cho mọi API call, refresh_token để làm mới session.
     """
+
     access_token = drf_serializers.CharField()
     refresh_token = drf_serializers.CharField()
     token_type = drf_serializers.CharField()
@@ -50,6 +52,7 @@ class OtpTokenOutputSerializer(drf_serializers.Serializer):
 
 
 # ── Views ──────────────────────────────────────────────────────────────────────
+
 
 class OtpSendView(APIView):
     """
@@ -60,6 +63,7 @@ class OtpSendView(APIView):
     - Cooldown: 60 giây giữa các lần gửi.
     - Không yêu cầu xác thực (AllowAny).
     """
+
     authentication_classes = []
     permission_classes = [AllowAny]
 
@@ -109,6 +113,7 @@ class OtpVerifyView(APIView):
     Lưu ý: access_token là Keycloak JWT hợp lệ — app dùng luôn để gọi API,
     không cần bước đăng nhập thêm.
     """
+
     authentication_classes = []
     permission_classes = [AllowAny]
 
@@ -135,7 +140,7 @@ class OtpVerifyView(APIView):
 
         # 1) Verify OTP
         try:
-            otp_service.verify_otp(email, code)
+            otp_service.verify_otp(email, code, consume=False)
         except otp_service.OtpExpiredError as e:
             return error_response(
                 code=ResponseCode.INVALID_CREDENTIALS,
@@ -160,6 +165,7 @@ class OtpVerifyView(APIView):
             keycloak_user_id = get_or_create_keycloak_user(email)
             token_data = exchange_token_for_user(keycloak_user_id)
             KeycloakJWTAuthentication().authenticate_token(token_data["access_token"])
+            otp_service.consume_otp(email)
         except KeycloakAdminError as e:
             return error_response(
                 code=ResponseCode.SERVICE_UNAVAILABLE,
@@ -176,13 +182,15 @@ class OtpVerifyView(APIView):
             )
 
         # 4) Trả token cho app
-        output = OtpTokenOutputSerializer({
-            "access_token": token_data["access_token"],
-            "refresh_token": token_data.get("refresh_token", ""),
-            "token_type": token_data.get("token_type", "Bearer"),
-            "expires_in": token_data.get("expires_in", 300),
-            "refresh_expires_in": token_data.get("refresh_expires_in", 1800),
-        })
+        output = OtpTokenOutputSerializer(
+            {
+                "access_token": token_data["access_token"],
+                "refresh_token": token_data.get("refresh_token", ""),
+                "token_type": token_data.get("token_type", "Bearer"),
+                "expires_in": token_data.get("expires_in", 300),
+                "refresh_expires_in": token_data.get("refresh_expires_in", 1800),
+            }
+        )
         return success_response(
             data=output.data,
             message="Đăng nhập thành công.",

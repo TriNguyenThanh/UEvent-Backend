@@ -14,14 +14,16 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
 
-
 # ── Cache key helpers ──────────────────────────────────────────────────────────
+
 
 def _key_code(email: str) -> str:
     return f"otp:{email.lower()}:code"
 
+
 def _key_attempts(email: str) -> str:
     return f"otp:{email.lower()}:attempts"
+
 
 def _key_cooldown(email: str) -> str:
     return f"otp:{email.lower()}:cooldown"
@@ -29,17 +31,22 @@ def _key_cooldown(email: str) -> str:
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
+
 class OtpCooldownError(Exception):
     """Gửi OTP quá nhanh — vẫn còn trong cooldown window."""
+
     def __init__(self, remaining_seconds: int):
         self.remaining_seconds = remaining_seconds
         super().__init__(f"Vui lòng chờ {remaining_seconds} giây trước khi gửi lại.")
 
+
 class OtpMaxAttemptsError(Exception):
     """Nhập sai OTP quá nhiều lần — mã bị khoá."""
 
+
 class OtpInvalidError(Exception):
     """Mã OTP không đúng."""
+
 
 class OtpExpiredError(Exception):
     """Mã OTP đã hết hạn."""
@@ -67,7 +74,7 @@ def send_otp(email: str) -> None:
     _send_otp_email(email, code)
 
 
-def verify_otp(email: str, code: str) -> None:
+def verify_otp(email: str, code: str, *, consume: bool = True) -> None:
     """
     Xác thực mã OTP.
     Raise:
@@ -90,17 +97,21 @@ def verify_otp(email: str, code: str) -> None:
         # Tăng counter
         cache.set(_key_attempts(email), attempts + 1, timeout=settings.OTP_TTL_SECONDS)
         remaining = settings.OTP_MAX_ATTEMPTS - attempts - 1
-        raise OtpInvalidError(
-            f"Mã OTP không đúng. Còn {remaining} lần thử."
-        )
+        raise OtpInvalidError(f"Mã OTP không đúng. Còn {remaining} lần thử.")
 
     # OTP đúng → xoá hết để không dùng lại được
+    if consume:
+        consume_otp(email)
+
+
+def consume_otp(email: str) -> None:
     cache.delete(_key_code(email))
     cache.delete(_key_attempts(email))
     cache.delete(_key_cooldown(email))
 
 
 # ── Email template ─────────────────────────────────────────────────────────────
+
 
 def _send_otp_email(email: str, code: str) -> None:
     ttl_minutes = settings.OTP_TTL_SECONDS // 60

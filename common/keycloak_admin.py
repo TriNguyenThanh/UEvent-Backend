@@ -171,7 +171,8 @@ def exchange_token_for_user(keycloak_user_id: str) -> Dict[str, Any]:
     Trả về dict chứa: access_token, refresh_token, expires_in, refresh_expires_in.
     """
     import logging
-    logger = logging.getLogger('django')
+
+    logger = logging.getLogger("django")
 
     service_token = _get_service_account_token()
 
@@ -210,3 +211,40 @@ def exchange_token_for_user(keycloak_user_id: str) -> Dict[str, Any]:
     logger.info("Token Exchange thành công.")
     return response.json()
 
+
+def logout_keycloak_refresh_token(
+    refresh_token: str,
+    *,
+    client_id: str | None = None,
+    client_secret: str | None = None,
+) -> None:
+    """
+    Revoke a refresh token issued by the backend token-exchange client.
+
+    OTP and native Google mobile flows receive tokens minted with
+    KEYCLOAK_ADMIN_CLIENT_ID in exchange_token_for_user(), so logout must use
+    the same client credentials.
+    """
+    client_id = client_id or settings.KEYCLOAK_ADMIN_CLIENT_ID
+    client_secret = (
+        settings.KEYCLOAK_ADMIN_CLIENT_SECRET
+        if client_secret is None
+        else client_secret
+    )
+    request_data = {
+        "client_id": client_id,
+        "refresh_token": refresh_token,
+    }
+    if client_secret:
+        request_data["client_secret"] = client_secret
+
+    response = requests.post(
+        settings.KEYCLOAK_LOGOUT_URL,
+        data=request_data,
+        timeout=getattr(settings, "KEYCLOAK_TOKEN_TIMEOUT", 10),
+    )
+    if response.status_code not in (200, 204):
+        raise KeycloakAdminError(
+            f"Keycloak logout failed: {response.text}",
+            status_code=response.status_code,
+        )

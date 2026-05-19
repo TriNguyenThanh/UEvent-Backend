@@ -26,16 +26,23 @@ class AdminKeycloakAuthServiceTests(TestCase):
         KEYCLOAK_TOKEN_TIMEOUT=5,
     )
     @patch("apps.system_admin.services.auth_service.AdminAuditService.log_action")
-    @patch("apps.system_admin.services.auth_service.KeycloakJWTAuthentication.authenticate_token")
+    @patch(
+        "apps.system_admin.services.auth_service.KeycloakJWTAuthentication.authenticate_token"
+    )
     @patch("apps.system_admin.services.auth_service.requests.post")
-    def test_admin_login_exchanges_password_with_keycloak(self, mock_post, mock_authenticate_token, mock_log_action):
+    def test_admin_login_exchanges_password_with_keycloak(
+        self, mock_post, mock_authenticate_token, mock_log_action
+    ):
         response = Mock(status_code=200)
         response.json.return_value = {
             "access_token": "keycloak-access",
             "refresh_token": "keycloak-refresh",
         }
         mock_post.return_value = response
-        mock_authenticate_token.return_value = (self.admin_user, {"sub": "keycloak-sub"})
+        mock_authenticate_token.return_value = (
+            self.admin_user,
+            {"sub": "keycloak-sub"},
+        )
 
         result = AdminAuthService.admin_login(username="admin", password="secret")
 
@@ -58,16 +65,23 @@ class AdminKeycloakAuthServiceTests(TestCase):
         KEYCLOAK_TOKEN_URL="https://auth.example.test/token",
         KEYCLOAK_TOKEN_TIMEOUT=5,
     )
-    @patch("apps.system_admin.services.auth_service.KeycloakJWTAuthentication.authenticate_token")
+    @patch(
+        "apps.system_admin.services.auth_service.KeycloakJWTAuthentication.authenticate_token"
+    )
     @patch("apps.system_admin.services.auth_service.requests.post")
-    def test_refresh_token_exchanges_refresh_with_keycloak(self, mock_post, mock_authenticate_token):
+    def test_refresh_token_exchanges_refresh_with_keycloak(
+        self, mock_post, mock_authenticate_token
+    ):
         response = Mock(status_code=200)
         response.json.return_value = {
             "access_token": "new-access",
             "refresh_token": "new-refresh",
         }
         mock_post.return_value = response
-        mock_authenticate_token.return_value = (self.admin_user, {"sub": "keycloak-sub"})
+        mock_authenticate_token.return_value = (
+            self.admin_user,
+            {"sub": "keycloak-sub"},
+        )
 
         result = AdminAuthService.refresh_token(refresh="old-refresh")
 
@@ -75,6 +89,20 @@ class AdminKeycloakAuthServiceTests(TestCase):
         posted_data = mock_post.call_args.kwargs["data"]
         self.assertEqual(posted_data["grant_type"], "refresh_token")
         self.assertEqual(posted_data["refresh_token"], "old-refresh")
+
+    @override_settings(
+        KEYCLOAK_CLIENT_ID="uevent-admin",
+        KEYCLOAK_CLIENT_SECRET="secret",
+    )
+    @patch("apps.system_admin.services.auth_service.logout_keycloak_refresh_token")
+    def test_admin_logout_uses_shared_keycloak_logout_helper(self, mock_logout):
+        AdminAuthService._logout_keycloak_refresh_token("old-refresh")
+
+        mock_logout.assert_called_once_with(
+            "old-refresh",
+            client_id="uevent-admin",
+            client_secret="secret",
+        )
 
 
 class AdminKeycloakAuthApiTests(TestCase):
@@ -119,7 +147,10 @@ class AdminKeycloakAuthApiTests(TestCase):
 
     @patch("apps.system_admin.views.auth_views.AdminAuthService.refresh_token")
     def test_refresh_endpoint_returns_new_access_token(self, mock_refresh_token):
-        mock_refresh_token.return_value = {"access": "new-access", "refresh": "new-refresh"}
+        mock_refresh_token.return_value = {
+            "access": "new-access",
+            "refresh": "new-refresh",
+        }
 
         response = self.client.post(
             reverse("system_admin:admin-token-refresh"),
@@ -128,7 +159,9 @@ class AdminKeycloakAuthApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["data"], {"access": "new-access", "refresh": "new-refresh"})
+        self.assertEqual(
+            response.data["data"], {"access": "new-access", "refresh": "new-refresh"}
+        )
         mock_refresh_token.assert_called_once_with(refresh="old-refresh")
 
     @patch("apps.system_admin.views.auth_views.AdminAuthService.admin_logout")
@@ -142,4 +175,6 @@ class AdminKeycloakAuthApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_admin_logout.assert_called_once_with(actor=self.admin_user, refresh="keycloak-refresh")
+        mock_admin_logout.assert_called_once_with(
+            actor=self.admin_user, refresh="keycloak-refresh"
+        )
