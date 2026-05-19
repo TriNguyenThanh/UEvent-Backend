@@ -5,6 +5,7 @@ from django.conf import settings
 
 from common.authentication import KeycloakJWTAuthentication
 from common.exceptions import BaseAPIException, ForbiddenError, UnauthorizedError
+from common.keycloak_admin import logout_keycloak_refresh_token
 from common.response_codes import ResponseCode
 from .audit_service import AdminAuditService
 
@@ -23,7 +24,9 @@ class AdminAuthService:
                 "scope": settings.KEYCLOAK_SCOPE,
             }
         )
-        user, _ = AdminAuthService._authenticate_access_token(token_data["access_token"])
+        user, _ = AdminAuthService._authenticate_access_token(
+            token_data["access_token"]
+        )
         AdminAuthService._ensure_admin_user(user)
 
         AdminAuditService.log_action(
@@ -48,7 +51,9 @@ class AdminAuthService:
                 "refresh_token": refresh,
             }
         )
-        user, _ = AdminAuthService._authenticate_access_token(token_data["access_token"])
+        user, _ = AdminAuthService._authenticate_access_token(
+            token_data["access_token"]
+        )
         AdminAuthService._ensure_admin_user(user)
 
         result = {"access": token_data["access_token"]}
@@ -123,20 +128,13 @@ class AdminAuthService:
 
     @staticmethod
     def _logout_keycloak_refresh_token(refresh: str) -> None:
-        data = {
-            "client_id": settings.KEYCLOAK_CLIENT_ID,
-            "refresh_token": refresh,
-        }
-        if settings.KEYCLOAK_CLIENT_SECRET:
-            data["client_secret"] = settings.KEYCLOAK_CLIENT_SECRET
-
         try:
-            requests.post(
-                settings.KEYCLOAK_LOGOUT_URL,
-                data=data,
-                timeout=settings.KEYCLOAK_TOKEN_TIMEOUT,
+            logout_keycloak_refresh_token(
+                refresh,
+                client_id=settings.KEYCLOAK_CLIENT_ID,
+                client_secret=settings.KEYCLOAK_CLIENT_SECRET,
             )
-        except requests.RequestException:
+        except Exception:
             pass
 
     @staticmethod
