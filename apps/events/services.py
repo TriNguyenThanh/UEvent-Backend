@@ -8,7 +8,15 @@ from django.utils.text import slugify
 from rest_framework.exceptions import PermissionDenied
 
 from apps.events.models import Event, EventOrganizer, RegistrationFormField
+from apps.registrations.models import EventRegistration
 from common.exceptions import ForbiddenError, NotFoundError
+
+
+ORGANIZER_EVENT_LIST_ROLES = {
+    EventOrganizer.OrganizerRole.OWNER,
+    EventOrganizer.OrganizerRole.CO_HOST,
+    EventOrganizer.OrganizerRole.STAFF,
+}
 
 
 def is_event_organizer(user, event):
@@ -66,13 +74,14 @@ class OrganizerEventService:
         """
         List events for organizer.
 
-        Only returns events where actor is creator or in organizers.
+        Only returns events where actor has owner, co-host, or staff role.
         Supports filtering by status, category_id, visibility.
         Supports search on title and description (case-insensitive).
         Supports ordering: start_at, created_at, updated_at, status.
         """
         queryset = Event.objects.filter(
-            Q(created_by=actor) | Q(organizers__user=actor)
+            organizers__user=actor,
+            organizers__organizer_role__in=ORGANIZER_EVENT_LIST_ROLES,
         ).distinct()
 
         if status:
@@ -115,7 +124,7 @@ class OrganizerEventService:
         Create new event.
 
         Auto-generates unique slug, sets created_by=actor,
-        status=DRAFT, and creates EventOrganizer with role=OWNER.
+        status=DRAFT, and creates event role with role=OWNER.
         """
         title = data.get("title", "")
         requested_slug = data.get("slug", "")
@@ -147,10 +156,10 @@ class OrganizerEventService:
 
         event.save()
 
-        EventOrganizer.objects.create(
+        EventOrganizer.objects.get_or_create(
             event=event,
             user=actor,
-            organizer_role=EventOrganizer.OrganizerRole.OWNER,
+            defaults={"organizer_role": EventOrganizer.OrganizerRole.OWNER},
         )
 
         return OrganizerEventService._events_with_related().get(pk=event.pk)
@@ -167,6 +176,16 @@ class OrganizerEventService:
 
         data.pop("slug", None)
 
+        missing = object()
+
+        category_id = data.pop("category", missing)
+        if category_id is not missing:
+            event.category_id = category_id
+
+        room_id = data.pop("room", missing)
+        if room_id is not missing:
+            event.room_id = room_id
+
         for field, value in data.items():
             if hasattr(event, field):
                 setattr(event, field, value)
@@ -181,3 +200,76 @@ class OrganizerEventService:
         """Soft-delete event with access check."""
         event = OrganizerEventService.get_event(actor, event_id)
         event.delete()
+
+
+class PublicEventService:
+    @staticmethod
+    def search_public_events(
+        *,
+        search=None,
+        category=None,
+        status=None,
+        ordering=None,
+    ) -> QuerySet[Event]:
+        """Search public events visible to every role."""
+        public_statuses = {Event.Status.APPROVED, Event.Status.ACTIVE}
+        queryset = Event.objects.filter(
+            visibility=Event.Visibility.PUBLIC,
+            status__in=public_statuses,
+        )
+
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) | Q(description__icontains=search)
+            )
+        if category:
+            queryset = queryset.filter(
+                Q(category__slug__iexact=category) | Q(category__name__icontains=category)
+            )
+        if status in public_statuses:
+            queryset = queryset.filter(status=status)
+
+        valid_ordering = {"start_at", "created_at", "updated_at", "title"}
+        if ordering and ordering.lstrip("-") in valid_ordering:
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by("start_at", "-created_at")
+
+        return queryset.select_related("category", "created_by")
+
+
+class UserEventService:
+    @staticmethod
+    def highlight_events_for_user(actor, limit: int = 2) -> list[Event]:
+        """
+        Return up to ``limit`` events for the user.
+
+        Registered events are prioritized regardless of registration status.
+        If there are fewer than ``limit`` registered events, fill the rest with
+        events created by the user.
+        """
+        if limit <= 0:
+            return []
+
+        registrations = (
+            EventRegistration.objects.filter(
+                user=actor,
+                event__deleted_at__isnull=True,
+            )
+            .select_related("event", "event__category", "event__created_by")
+            .order_by("-registered_at", "-created_at")[:limit]
+        )
+        events = [registration.event for registration in registrations]
+
+        if len(events) >= limit:
+            return events
+
+        selected_event_ids = [event.id for event in events]
+        created_events = (
+            Event.objects.filter(created_by=actor)
+            .exclude(id__in=selected_event_ids)
+            .select_related("category", "created_by")
+            .order_by("-created_at")[: limit - len(events)]
+        )
+        events.extend(created_events)
+        return events

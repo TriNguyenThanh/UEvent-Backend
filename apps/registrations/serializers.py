@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.events.models import EventOrganizer
 from apps.registrations.models import EventRegistration
 from apps.registrations.models import Ticket
 
@@ -82,6 +83,19 @@ class RegistrationListSerializer(serializers.ModelSerializer):
 
 class RegistrationCancelSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)
+
+
+class EventRoleSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    event_id = serializers.UUIDField(source="event.id", read_only=True)
+
+    class Meta:
+        model = EventOrganizer
+        fields = ["id", "event_id", "user", "organizer_role", "joined_at"]
+        read_only_fields = fields
+
+    def get_user(self, obj):
+        return RegistrationUserSummarySerializer(obj.user).data
 
 
 class RegistrationQrSerializer(serializers.Serializer):

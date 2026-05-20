@@ -10,6 +10,8 @@ from django.conf import settings
 _JWKS_CACHE_KEY = "jwks"
 _jwks_cache = TTLCache(maxsize=1, ttl=settings.KEYCLOAK_JWKS_CACHE_TTL)
 _jwks_lock = threading.Lock()
+_public_key_cache = TTLCache(maxsize=16, ttl=settings.KEYCLOAK_JWKS_CACHE_TTL)
+_public_key_lock = threading.Lock()
 
 
 def _fetch_jwks() -> Dict[str, Any]:
@@ -63,4 +65,16 @@ def build_rsa_public_key(jwk: Dict[str, Any]):
     """Build a cryptography public key from an RSA JWK."""
     if jwk.get("kty") != "RSA":
         raise ValueError("Unsupported JWK key type.")
-    return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(jwk))
+
+    cache_key = json.dumps(jwk, sort_keys=True)
+    cached = _public_key_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    with _public_key_lock:
+        cached = _public_key_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        public_key = jwt.algorithms.RSAAlgorithm.from_jwk(cache_key)
+        _public_key_cache[cache_key] = public_key
+        return public_key

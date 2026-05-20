@@ -25,7 +25,7 @@ GET /api/v1/events?keyword=workshop&category=academic&startDate=2026-05-01&endDa
 
 | Method   | Endpoint                         | Quyền  | Mô tả                          |
 | -------- | -------------------------------- | ------ | ------------------------------ |
-| `GET`    | `/event-categories`              | Public | Lấy danh sách danh mục sự kiện |
+| `GET`    | `/api/v1/event-categories/`      | Public | Lấy danh sách danh mục sự kiện |
 | `POST`   | `/event-categories`              | Admin  | Tạo danh mục sự kiện           |
 | `PATCH`  | `/event-categories/{categoryId}` | Admin  | Cập nhật danh mục              |
 | `DELETE` | `/event-categories/{categoryId}` | Admin  | Xóa danh mục                   |

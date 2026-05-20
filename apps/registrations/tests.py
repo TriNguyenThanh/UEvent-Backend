@@ -205,9 +205,18 @@ class RegistrationApiTests(RegistrationTestMixin, APITestCase):
     def event_registrations_url(self, event=None):
         return reverse("event-registration-list-create", kwargs={"event_id": (event or self.event).id})
 
+    def organizer_event_registrations_url(self, event=None):
+        return reverse("organizer-event-registration-list", kwargs={"event_id": (event or self.event).id})
+
     def event_registration_detail_url(self, registration, event=None):
         return reverse(
             "event-registration-detail",
+            kwargs={"event_id": (event or self.event).id, "registration_id": registration.id},
+        )
+
+    def grant_cohost_url(self, registration, event=None):
+        return reverse(
+            "organizer-registration-grant-cohost",
             kwargs={"event_id": (event or self.event).id, "registration_id": registration.id},
         )
 
@@ -285,6 +294,45 @@ class RegistrationApiTests(RegistrationTestMixin, APITestCase):
         self.assertEqual(list_response.data["results"][0]["user"]["id"], str(self.attendee.id))
         self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
         self.assertEqual(detail_response.data["id"], str(registration.id))
+
+    def test_organizer_event_registration_list_alias_returns_registrations(self):
+        self.create_registration(user=self.attendee)
+        self.add_organizer(user=self.host)
+        self.authenticate(self.host)
+
+        response = self.client.get(self.organizer_event_registrations_url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["user"]["id"], str(self.attendee.id))
+
+    def test_owner_can_grant_cohost_to_registered_user(self):
+        registration = self.create_registration(user=self.attendee)
+        self.add_organizer(user=self.host, role=EventOrganizer.OrganizerRole.OWNER)
+        self.authenticate(self.host)
+
+        response = self.client.post(self.grant_cohost_url(registration), {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["organizer_role"], EventOrganizer.OrganizerRole.CO_HOST)
+        self.assertEqual(response.data["user"]["id"], str(self.attendee.id))
+        self.assertTrue(
+            EventOrganizer.objects.filter(
+                event=self.event,
+                user=self.attendee,
+                organizer_role=EventOrganizer.OrganizerRole.CO_HOST,
+            ).exists()
+        )
+
+    def test_non_owner_cannot_grant_cohost(self):
+        registration = self.create_registration(user=self.attendee)
+        self.add_organizer(user=self.other_user, role=EventOrganizer.OrganizerRole.CO_HOST)
+        self.authenticate(self.other_user)
+
+        response = self.client.post(self.grant_cohost_url(registration), {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(EventOrganizer.objects.filter(event=self.event, user=self.attendee).exists())
 
     def test_event_creator_can_list_registrations_without_explicit_organizer_role(self):
         self.create_registration(user=self.attendee)

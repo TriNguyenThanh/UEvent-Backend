@@ -26,7 +26,9 @@ Ví dụ field tùy chỉnh:
 | -------- | --------------------------------------------------------- | --------- | ------------------------------------------- |
 | `POST`   | `/events/{eventId}/registrations/`                         | User      | Đăng ký tham gia sự kiện                    |
 | `GET`    | `/events/{eventId}/registrations/`                         | Organizer | Xem danh sách đăng ký                       |
+| `GET`    | `/organizer/events/{eventId}/registrations/`               | Organizer | Xem danh sách đăng ký theo namespace BTC    |
 | `GET`    | `/events/{eventId}/registrations/{registrationId}/`        | Organizer | Xem chi tiết đăng ký                        |
+| `POST`   | `/organizer/events/{eventId}/registrations/{registrationId}/cohost/` | Owner | Cấp quyền co-host cho người đã đăng ký |
 | `DELETE` | `/events/{eventId}/registrations/me/`                      | User      | Hủy đăng ký của bản thân                    |
 | `PATCH`  | `/events/{eventId}/registrations/{registrationId}/cancel/` | Organizer | BTC hủy đăng ký của người tham gia          |
 | `GET`    | `/registrations/me/`                                       | User      | Xem toàn bộ đăng ký của người dùng hiện tại |
