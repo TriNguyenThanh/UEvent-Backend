@@ -6,7 +6,7 @@
       "created_at": "2026-05-17T08:00:00Z",
       "updated_at": "2026-05-17T08:00:00Z",
       "deleted_at": null,
-      "code": "ADMIN",
+      "code": "admin",
       "name": "Admin",
       "description": "Quyen quan tri he thong",
       "is_active": true
@@ -19,7 +19,7 @@
       "created_at": "2026-05-17T08:00:00Z",
       "updated_at": "2026-05-17T08:00:00Z",
       "deleted_at": null,
-      "code": "ORGANIZER",
+      "code": "organizer",
       "name": "Organizer",
       "description": "Ban to chuc su kien",
       "is_active": true
@@ -32,7 +32,7 @@
       "created_at": "2026-05-17T08:00:00Z",
       "updated_at": "2026-05-17T08:00:00Z",
       "deleted_at": null,
-      "code": "STUDENT",
+      "code": "student",
       "name": "Student",
       "description": "Sinh vien / Nguoi tham gia",
       "is_active": true
@@ -321,7 +321,7 @@
       "deleted_at": null,
       "name": "Chuyên mục UTC2 002",
       "slug": "utc2-category-002",
-      "description": "Nhóm sự kiện học thuật UTC2 số 002",
+      "description": "Nhóm sự kiện học thuật UTC2",
       "icon": "school",
       "color": "#1E88E5",
       "is_active": true
@@ -336,7 +336,7 @@
       "deleted_at": null,
       "name": "Chuyên mục UTC2 003",
       "slug": "utc2-category-003",
-      "description": "Nhóm sự kiện học thuật UTC2 số 003",
+      "description": "Nhóm sự kiện âm nhạc và nghệ thuật UTC2",
       "icon": "school",
       "color": "#1E88E5",
       "is_active": true
@@ -363,7 +363,20 @@
       "updated_at": "2026-04-17T08:30:00Z",
       "deleted_at": null,
       "campus": "66666666-6666-4666-8666-666666666666",
-      "name": "Building A",
+      "name": "Toàn nhà C1",
+      "code": "A",
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.building",
+    "pk": "77777777-7777-4777-8777-777777777778",
+    "fields": {
+      "created_at": "2026-04-17T08:30:00Z",
+      "updated_at": "2026-04-17T08:30:00Z",
+      "deleted_at": null,
+      "campus": "66666666-6666-4666-8666-666666666666",
+      "name": "Toàn nhà đa năng",
       "code": "A",
       "is_active": true
     }
@@ -376,7 +389,35 @@
       "updated_at": "2026-04-17T08:35:00Z",
       "deleted_at": null,
       "building": "77777777-7777-4777-8777-777777777777",
-      "name": "Room 101",
+      "name": "Hội trường C1",
+      "code": "101",
+      "capacity": 120,
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.room",
+    "pk": "88888888-8888-4888-8888-888888888889",
+    "fields": {
+      "created_at": "2026-04-17T08:35:00Z",
+      "updated_at": "2026-04-17T08:35:00Z",
+      "deleted_at": null,
+      "building": "77777777-7777-4777-8777-777777777778",
+      "name": "Hội trường đa năng",
+      "code": "101",
+      "capacity": 120,
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.room",
+    "pk": "88888888-8888-4888-8888-888888888890",
+    "fields": {
+      "created_at": "2026-04-17T08:35:00Z",
+      "updated_at": "2026-04-17T08:35:00Z",
+      "deleted_at": null,
+      "building": "77777777-7777-4777-8777-777777777778",
+      "name": "Hội thảo Đa năng",
       "code": "101",
       "capacity": 120,
       "is_active": true

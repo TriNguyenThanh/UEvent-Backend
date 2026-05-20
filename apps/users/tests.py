@@ -1,4 +1,5 @@
 from io import StringIO
+import time
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -12,6 +13,7 @@ from rest_framework.test import APIClient
 from apps.users.models import Role, UserAuthIdentity, UserRole
 from apps.users.services import KeycloakProvisioningService
 from common import otp as otp_service
+from common.authentication import KeycloakJWTAuthentication
 from common.keycloak_admin import (
     KeycloakAdminError,
     exchange_token_for_user,
@@ -170,7 +172,71 @@ class KeycloakProvisioningServiceTests(TestCase):
             KeycloakProvisioningService.provision_from_payload(self.payload())
 
 
+class KeycloakJWTAuthenticationCacheTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.User = get_user_model()
+        self.user = self.User.objects.create_user(
+            username="test@st.utc2.edu.vn",
+            email="test@st.utc2.edu.vn",
+        )
+        self.auth = KeycloakJWTAuthentication()
+        self.token = "access-token"
+
+    def tearDown(self):
+        cache.clear()
+
+    def payload(self):
+        return {
+            "sub": "keycloak-user-id",
+            "email": "test@st.utc2.edu.vn",
+            "email_verified": True,
+            "exp": int(time.time()) + 300,
+        }
+
+    @override_settings(KEYCLOAK_AUTH_USER_CACHE_TTL=300)
+    @patch("common.authentication.KeycloakProvisioningService.provision_from_payload")
+    @patch.object(KeycloakJWTAuthentication, "_decode_token")
+    def test_reuses_cached_user_without_reprovisioning_same_token(
+        self,
+        mock_decode_token,
+        mock_provision,
+    ):
+        mock_decode_token.return_value = self.payload()
+        mock_provision.return_value = self.user
+
+        first_user, _ = self.auth.authenticate_token(self.token)
+        second_user, _ = self.auth.authenticate_token(self.token)
+
+        self.assertEqual(first_user.pk, self.user.pk)
+        self.assertEqual(second_user.pk, self.user.pk)
+        self.assertEqual(mock_decode_token.call_count, 2)
+        mock_provision.assert_called_once()
+
+    @override_settings(KEYCLOAK_AUTH_USER_CACHE_TTL=300)
+    @patch("common.authentication.KeycloakProvisioningService.provision_from_payload")
+    @patch.object(KeycloakJWTAuthentication, "_decode_token")
+    def test_cached_user_status_is_checked_each_request(
+        self,
+        mock_decode_token,
+        mock_provision,
+    ):
+        mock_decode_token.return_value = self.payload()
+        mock_provision.return_value = self.user
+
+        self.auth.authenticate_token(self.token)
+        self.user.is_active = False
+        self.user.save(update_fields=["is_active"])
+
+        with self.assertRaises(AuthenticationFailed):
+            self.auth.authenticate_token(self.token)
+        mock_provision.assert_called_once()
+
+
 class KeycloakAdminClientTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     @patch("common.keycloak_admin.requests.post")
     @patch("common.keycloak_admin.requests.get")
     def test_get_or_create_keycloak_user_creates_verified_email_user(

@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
-from apps.events.models import Event
+from apps.events.models import Event, EventOrganizer
 from apps.registrations.models import CheckinLog, EventRegistration, Ticket, TicketQrToken
 from common.exceptions import ConflictError
 
@@ -130,6 +130,30 @@ def cancel_event_registration(*, registration: EventRegistration, reason: str | 
         ticket.save(update_fields=["status", "updated_at"])
 
     return EventRegistration.objects.select_related("event", "user", "ticket").get(id=registration.id)
+
+
+@transaction.atomic
+def grant_cohost_role_to_registration(*, event: Event, registration_id):
+    registration = (
+        EventRegistration.objects.select_related("event", "user")
+        .filter(id=registration_id, event=event)
+        .first()
+    )
+    if registration is None:
+        raise NotFound("Registration not found.")
+
+    if registration.status in {
+        EventRegistration.RegistrationStatus.CANCELLED,
+        EventRegistration.RegistrationStatus.REJECTED,
+    }:
+        raise ValidationError({"registration": "Cannot grant co-host role to an inactive registration."})
+
+    role, _ = EventOrganizer.objects.update_or_create(
+        event=event,
+        user=registration.user,
+        defaults={"organizer_role": EventOrganizer.OrganizerRole.CO_HOST},
+    )
+    return EventOrganizer.objects.select_related("event", "user").get(pk=role.pk)
 
 
 @transaction.atomic

@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional
 
 import requests
 from django.conf import settings
+from django.core.cache import cache
 
 
 class KeycloakAdminError(Exception):
@@ -26,11 +27,18 @@ class KeycloakAdminError(Exception):
         self.status_code = status_code
 
 
+_SERVICE_ACCOUNT_TOKEN_CACHE_KEY = "keycloak_admin:service_account_token"
+
+
 def _get_service_account_token() -> str:
     """
     Lấy access token của service account (client_credentials grant).
     Token này dùng để gọi Keycloak Admin API — KHÔNG trả về cho client.
     """
+    cached = cache.get(_SERVICE_ACCOUNT_TOKEN_CACHE_KEY)
+    if cached:
+        return cached
+
     response = requests.post(
         settings.KEYCLOAK_TOKEN_URL,
         data={
@@ -38,14 +46,19 @@ def _get_service_account_token() -> str:
             "client_id": settings.KEYCLOAK_ADMIN_CLIENT_ID,
             "client_secret": settings.KEYCLOAK_ADMIN_CLIENT_SECRET,
         },
-        timeout=10,
+        timeout=getattr(settings, "KEYCLOAK_TOKEN_TIMEOUT", 10),
     )
     if response.status_code != 200:
         raise KeycloakAdminError(
             f"Không lấy được service account token: {response.text}",
             status_code=response.status_code,
         )
-    return response.json()["access_token"]
+
+    token_data = response.json()
+    token = token_data["access_token"]
+    timeout = max(int(token_data.get("expires_in", 60)) - 30, 1)
+    cache.set(_SERVICE_ACCOUNT_TOKEN_CACHE_KEY, token, timeout=timeout)
+    return token
 
 
 def _admin_headers(service_token: str) -> Dict[str, str]:

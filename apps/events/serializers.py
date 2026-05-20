@@ -11,6 +11,12 @@ class OrganizerEventCategorySummarySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "slug", "color", "icon"]
 
 
+class PublicEventCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventCategory
+        fields = ["id", "name", "slug", "description", "color", "icon"]
+
+
 class OrganizerEventRoomSummarySerializer(serializers.Serializer):
     id = serializers.UUIDField(allow_null=True)
     name = serializers.CharField(allow_blank=True)
@@ -72,6 +78,46 @@ class OrganizerEventListOutputSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
+class PublicEventSearchOutputSerializer(OrganizerEventListOutputSerializer):
+    class Meta(OrganizerEventListOutputSerializer.Meta):
+        fields = OrganizerEventListOutputSerializer.Meta.fields + [
+            "description",
+            "registration_open_at",
+            "registration_close_at",
+            "location_snapshot",
+            "deep_link",
+        ]
+
+
+class PublicEventSearchQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(required=False, allow_blank=True)
+    q = serializers.CharField(required=False, allow_blank=True)
+    category = serializers.CharField(required=False, allow_blank=True)
+    status = serializers.ChoiceField(
+        choices=[Event.Status.APPROVED, Event.Status.ACTIVE],
+        required=False,
+    )
+    ordering = serializers.ChoiceField(
+        choices=[
+            "start_at",
+            "-start_at",
+            "created_at",
+            "-created_at",
+            "updated_at",
+            "-updated_at",
+            "title",
+            "-title",
+        ],
+        required=False,
+    )
+
+    def get_search_value(self):
+        return self.validated_data.get("search") or self.validated_data.get("q")
+
+    def get_category_value(self):
+        return (self.validated_data.get("category") or "").strip()
 
 
 class OrganizerEventDetailOutputSerializer(OrganizerEventListOutputSerializer):

@@ -1,15 +1,19 @@
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.events.serializers import (
     OrganizerEventDetailOutputSerializer,
     OrganizerEventInputSerializer,
     OrganizerEventListOutputSerializer,
+    PublicEventCategorySerializer,
+    PublicEventSearchQuerySerializer,
+    PublicEventSearchOutputSerializer,
 )
-from apps.events.services import OrganizerEventService
+from apps.events.models import EventCategory
+from apps.events.services import OrganizerEventService, PublicEventService, UserEventService
 from common.exceptions import ForbiddenError, NotFoundError
 from common.pagination import EnvelopePageNumberPagination
 from common.responses import created_response, deleted_response, success_response
@@ -22,6 +26,101 @@ ORGANIZER_EVENT_ERROR_RESPONSES = {
     403: ApiErrorResponseSerializer(),
     404: ApiErrorResponseSerializer(),
 }
+
+
+class PublicEventCategoryListView(generics.ListAPIView):
+    """
+    GET /api/v1/event-categories/ - List active event categories
+    """
+    permission_classes = [AllowAny]
+    serializer_class = PublicEventCategorySerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return EventCategory.objects.filter(is_active=True).order_by("name")
+
+    @swagger_auto_schema(
+        operation_summary="List Event Categories",
+        operation_description="Get active event categories for public event browsing.",
+        responses={200: PublicEventCategorySerializer(many=True)},
+        tags=["Events"],
+    )
+    def get(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_queryset(), many=True)
+        return success_response(data=serializer.data)
+
+
+class PublicEventSearchView(generics.ListAPIView):
+    """
+    GET /api/v1/events/search/ - Search public events for every role
+    """
+    permission_classes = [AllowAny]
+    pagination_class = EnvelopePageNumberPagination
+    serializer_class = PublicEventSearchOutputSerializer
+
+    def get_queryset(self):
+        query_serializer = PublicEventSearchQuerySerializer(data=self.request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        return PublicEventService.search_public_events(
+            search=query_serializer.get_search_value(),
+            category=query_serializer.get_category_value(),
+            status=query_serializer.validated_data.get("status"),
+            ordering=query_serializer.validated_data.get("ordering"),
+        )
+
+    @swagger_auto_schema(
+        operation_summary="Search Public Events",
+        operation_description="Search public approved or active events. This endpoint is available to every role.",
+        manual_parameters=[
+            openapi.Parameter("search", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter(
+                "category",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                description="Category slug or name.",
+            ),
+            openapi.Parameter(
+                "status",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                enum=["approved", "active"],
+            ),
+            openapi.Parameter("ordering", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
+            openapi.Parameter("page_size", openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: PublicEventSearchOutputSerializer(many=True)},
+        tags=["Events"],
+    )
+    def get(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(data=serializer.data)
+
+
+class MyEventHighlightsView(APIView):
+    """
+    GET /api/v1/events/me/highlights/ - Get two relevant events for current user
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get My Event Highlights",
+        operation_description=(
+            "Lấy tối đa 2 sự kiện của user hiện tại. Ưu tiên sự kiện user đã đăng ký "
+            "bất kể trạng thái đăng ký; nếu thiếu thì bổ sung sự kiện user đã tạo."
+        ),
+        responses={200: OrganizerEventListOutputSerializer(many=True), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        tags=["Events"],
+    )
+    def get(self, request, *args, **kwargs):
+        events = UserEventService.highlight_events_for_user(request.user, limit=2)
+        serializer = OrganizerEventListOutputSerializer(events, many=True)
+        return success_response(data=serializer.data)
 
 
 class OrganizerEventListCreateView(generics.ListCreateAPIView):

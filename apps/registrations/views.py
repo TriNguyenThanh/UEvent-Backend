@@ -6,10 +6,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 
-from apps.events.models import Event
+from apps.events.models import Event, EventOrganizer
 from apps.events.services import assert_event_organizer, is_event_organizer
 from apps.registrations.models import EventRegistration, Ticket
 from apps.registrations.serializers import (
+    EventRoleSerializer,
     RegistrationCancelSerializer,
     RegistrationCreateSerializer,
     RegistrationListSerializer,
@@ -19,6 +20,7 @@ from apps.registrations.serializers import (
 from apps.registrations.services import (
     cancel_event_registration,
     create_event_registration,
+    grant_cohost_role_to_registration,
     issue_registration_qr,
 )
 from common.serializers import ApiErrorResponseSerializer
@@ -31,6 +33,18 @@ REGISTRATION_ERROR_RESPONSES = {
     404: ApiErrorResponseSerializer(),
     409: ApiErrorResponseSerializer(),
 }
+
+
+def assert_event_owner(actor, event):
+    if event.created_by_id == actor.id:
+        return
+    if EventOrganizer.objects.filter(
+        event=event,
+        user=actor,
+        organizer_role=EventOrganizer.OrganizerRole.OWNER,
+    ).exists():
+        return
+    raise PermissionDenied("Only event owner can perform this action.")
 
 
 class MyRegistrationListView(generics.ListAPIView):
@@ -141,6 +155,55 @@ class EventRegistrationDetailView(generics.RetrieveAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+class OrganizerEventRegistrationListView(generics.ListAPIView):
+    """
+    GET /api/v1/organizer/events/{event_id}/registrations/
+
+    Organizer-only alias for listing event registrations.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = RegistrationListSerializer
+
+    def get_queryset(self):  # type: ignore[override]
+        event = get_object_or_404(Event.objects.prefetch_related("organizers"), id=self.kwargs["event_id"])
+        assert_event_organizer(self.request.user, event)
+        return (
+            EventRegistration.objects.filter(event=event)
+            .select_related("event", "user", "ticket")
+            .order_by("-registered_at", "-created_at")
+        )
+
+    @swagger_auto_schema(
+        operation_summary="List Organizer Event Registrations",
+        operation_description="Organizer xem danh sách người đăng ký của một sự kiện.",
+        responses={200: RegistrationListSerializer(many=True), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Registrations"],
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class OrganizerRegistrationGrantCohostView(APIView):
+    """
+    POST /api/v1/organizer/events/{event_id}/registrations/{registration_id}/cohost/
+
+    Event owner grants co-host role to the selected registration user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Grant Co-host Role",
+        operation_description="Owner cấp quyền co-host cho người dùng đã đăng ký sự kiện.",
+        responses={200: EventRoleSerializer(), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Registrations"],
+    )
+    def post(self, request, event_id, registration_id):
+        event = get_object_or_404(Event.objects.prefetch_related("organizers"), id=event_id)
+        assert_event_owner(request.user, event)
+        role = grant_cohost_role_to_registration(event=event, registration_id=registration_id)
+        return Response(EventRoleSerializer(role).data, status=status.HTTP_200_OK)
 
 
 class MyEventRegistrationCancelView(APIView):

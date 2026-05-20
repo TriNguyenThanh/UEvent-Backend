@@ -5,6 +5,8 @@ from apps.registrations.views import (
     EventRegistrationListCreateView,
     MyEventRegistrationCancelView,
     MyRegistrationListView,
+    OrganizerEventRegistrationListView,
+    OrganizerRegistrationGrantCohostView,
     OrganizerRegistrationCancelView,
     TicketCancelView,
     TicketDetailView,
@@ -14,6 +16,16 @@ from apps.registrations.views import (
 
 urlpatterns = [
     path("registrations/me/", MyRegistrationListView.as_view(), name="registration-me-list"),
+    path(
+        "organizer/events/<uuid:event_id>/registrations/",
+        OrganizerEventRegistrationListView.as_view(),
+        name="organizer-event-registration-list",
+    ),
+    path(
+        "organizer/events/<uuid:event_id>/registrations/<uuid:registration_id>/cohost/",
+        OrganizerRegistrationGrantCohostView.as_view(),
+        name="organizer-registration-grant-cohost",
+    ),
     path(
         "events/<uuid:event_id>/registrations/",
         EventRegistrationListCreateView.as_view(),
