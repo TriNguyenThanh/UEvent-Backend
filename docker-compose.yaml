@@ -16,6 +16,11 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - OPENOBSERVE_URL=http://openobserve:5080
+      - OPENOBSERVE_ORGANIZATION=default
+      - OPENOBSERVE_AUDIT_STREAM=uevent_audit
+      - OPENOBSERVE_USERNAME=root@example.com
+      - OPENOBSERVE_PASSWORD=${OPENOBSERVE_ROOT_PASSWORD:-OpenObservePass123!}
     command: ["/bin/sh", "/app/entrypoint.sh"]
     ports:
       - "8000:8000"
@@ -144,36 +149,18 @@ services:
     networks:
       - backend
 
-  opensearch:
-    image: opensearchproject/opensearch:2.13.0
-    container_name: opensearch
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:latest
+    container_name: openobserve
     restart: unless-stopped
     environment:
-      - discovery.type=single-node
-      - DISABLE_SECURITY_PLUGIN=true
-      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
+      - ZO_DATA_DIR=/data
+      - ZO_ROOT_USER_EMAIL=root@example.com
+      - ZO_ROOT_USER_PASSWORD=${OPENOBSERVE_ROOT_PASSWORD:-OpenObservePass123!}
     ports:
-      - "9200:9200"
+      - "5080:5080"
     volumes:
-      - opensearch_data:/usr/share/opensearch/data
-    networks:
-      - backend
-
-  opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:2.13.0
-    container_name: opensearch_dashboards
-    restart: unless-stopped
-    environment:
-      - OPENSEARCH_HOSTS=["http://opensearch:9200"]
-      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
-    ports:
-      - "5601:5601"
-    depends_on:
-      - opensearch
+      - openobserve_data:/data
     networks:
       - backend
 
@@ -192,12 +179,15 @@ services:
     container_name: fluent_bit
     restart: unless-stopped
     command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
+    environment:
+      - OPENOBSERVE_USERNAME=root@example.com
+      - OPENOBSERVE_PASSWORD=${OPENOBSERVE_ROOT_PASSWORD:-OpenObservePass123!}
     volumes:
       - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - ./fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
       - app_logs:/app/logs:ro
     depends_on:
-      - opensearch
+      - openobserve
     networks:
       - backend
 
@@ -206,7 +196,7 @@ volumes:
     driver: local
   redis_data:
     driver: local
-  opensearch_data:
+  openobserve_data:
     driver: local
   app_logs:
     driver: local
