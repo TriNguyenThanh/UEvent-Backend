@@ -364,7 +364,7 @@
       "deleted_at": null,
       "campus": "66666666-6666-4666-8666-666666666666",
       "name": "Toàn nhà C1",
-      "code": "A",
+      "code": "C1",
       "is_active": true
     }
   },
@@ -377,7 +377,7 @@
       "deleted_at": null,
       "campus": "66666666-6666-4666-8666-666666666666",
       "name": "Toàn nhà đa năng",
-      "code": "A",
+      "code": "DN",
       "is_active": true
     }
   },
@@ -404,7 +404,7 @@
       "deleted_at": null,
       "building": "77777777-7777-4777-8777-777777777778",
       "name": "Hội trường đa năng",
-      "code": "101",
+      "code": "102",
       "capacity": 120,
       "is_active": true
     }

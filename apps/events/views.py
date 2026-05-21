@@ -1,3 +1,6 @@
+import uuid
+
+from django.conf import settings
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import generics
@@ -8,12 +11,15 @@ from apps.events.serializers import (
     OrganizerEventDetailOutputSerializer,
     OrganizerEventInputSerializer,
     OrganizerEventListOutputSerializer,
+    OrganizerEventPresignedUrlInputSerializer,
+    OrganizerEventPresignedUrlOutputSerializer,
     PublicEventCategorySerializer,
     PublicEventSearchQuerySerializer,
     PublicEventSearchOutputSerializer,
 )
 from apps.events.models import EventCategory
 from apps.events.services import OrganizerEventService, PublicEventService, UserEventService
+from apps.utils.s3 import S3Client
 from common.exceptions import ForbiddenError, NotFoundError
 from common.pagination import EnvelopePageNumberPagination
 from common.responses import created_response, deleted_response, success_response
@@ -191,6 +197,51 @@ class OrganizerEventListCreateView(generics.ListCreateAPIView):
         return created_response(
             data=response_serializer.data,
             message="Tạo sự kiện thành công.",
+        )
+
+
+class OrganizerEventPresignedUrlView(APIView):
+    """
+    POST /api/v1/organizer/events/presigned-url/ - Create S3 presigned URL for event assets
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Create Organizer Event Upload URL",
+        operation_description="Create a presigned S3 URL for uploading organizer event cover images.",
+        request_body=OrganizerEventPresignedUrlInputSerializer,
+        responses={200: OrganizerEventPresignedUrlOutputSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        tags=["Organizer Events"],
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = OrganizerEventPresignedUrlInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        file_name = serializer.validated_data["file_name"]
+        content_type = serializer.validated_data["content_type"]
+        object_key = f"events/{request.user.id}/covers/{uuid.uuid4().hex}-{file_name}"
+
+        s3_client = S3Client()
+        expires_in = settings.AWS_S3_PRESIGNED_URL_EXPIRES
+        presigned_url = s3_client.generate_presigned_url(
+            object_key,
+            method="put_object",
+            expires_in=expires_in,
+            params={"ContentType": content_type},
+        )
+
+        output_serializer = OrganizerEventPresignedUrlOutputSerializer(
+            {
+                "object_key": object_key,
+                "presigned_url": presigned_url,
+                "public_url": s3_client.build_url(object_key),
+                "method": "PUT",
+                "expires_in": expires_in,
+            }
+        )
+        return success_response(
+            data=output_serializer.data,
+            message="Tạo presigned URL thành công.",
         )
 
 

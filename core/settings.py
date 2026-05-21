@@ -129,6 +129,17 @@ STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = 'users.User'
 
+AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID', default='')
+AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY', default='')
+AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME', default='')
+AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', default='ap-southeast-1')
+AWS_S3_ENDPOINT_URL = env('AWS_S3_ENDPOINT_URL', default='')
+AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', default='')
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': env('AWS_S3_CACHE_CONTROL', default='max-age=86400'),
+}
+AWS_S3_PRESIGNED_URL_EXPIRES = env.int('AWS_S3_PRESIGNED_URL_EXPIRES', default=3600)
+
 KEYCLOAK_SERVER_URL = env('KEYCLOAK_SERVER_URL', default='http://localhost').rstrip('/')
 KEYCLOAK_REALM = env('KEYCLOAK_REALM', default='test-realm')
 KEYCLOAK_AUDIENCE = env('KEYCLOAK_AUDIENCE', default='test-audience')
