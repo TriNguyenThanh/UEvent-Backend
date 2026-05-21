@@ -225,6 +225,36 @@ def exchange_token_for_user(keycloak_user_id: str) -> Dict[str, Any]:
     return response.json()
 
 
+def refresh_keycloak_token(refresh_token: str) -> Dict[str, Any]:
+    """
+    Exchange a refresh token minted by the backend token-exchange client for a
+    new access token.
+
+    OTP and native Google mobile flows receive tokens minted with
+    KEYCLOAK_ADMIN_CLIENT_ID in exchange_token_for_user(), so refresh must use
+    the same confidential client. The mobile app cannot safely hold that secret.
+    """
+    request_data = {
+        "grant_type": "refresh_token",
+        "client_id": settings.KEYCLOAK_ADMIN_CLIENT_ID,
+        "client_secret": settings.KEYCLOAK_ADMIN_CLIENT_SECRET,
+        "refresh_token": refresh_token,
+    }
+
+    response = requests.post(
+        settings.KEYCLOAK_TOKEN_URL,
+        data=request_data,
+        timeout=getattr(settings, "KEYCLOAK_TOKEN_TIMEOUT", 10),
+    )
+    if response.status_code != 200:
+        raise KeycloakAdminError(
+            f"Keycloak token refresh failed: {response.text}",
+            status_code=response.status_code,
+        )
+
+    return response.json()
+
+
 def logout_keycloak_refresh_token(
     refresh_token: str,
     *,

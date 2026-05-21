@@ -13,7 +13,7 @@ ERD Final này là bản chốt để đi vào triển khai backend MVP, dựa t
 4. Check-in QR (có chống giả mạo và chống race condition)
 5. Q&A và Feedback
 6. Notification
-7. Moderation (Audit logs tách ra OpenSearch/ELK)
+7. Moderation (Audit logs tách ra OpenObserve)
 8. Support module
 
 ### 1.2 Ngoài MVP
@@ -42,7 +42,7 @@ ERD Final này là bản chốt để đi vào triển khai backend MVP, dựa t
 17. Notifications có `template_id` nullable để mở rộng.
 18. `notification_recipients.read_at` không bắt buộc cho MVP.
 19. Moderation action có thêm `reopen`, `escalate`.
-20. `audit_logs` không lưu trong database — tách ra OpenSearch/ELK stack cho khả năng mở rộng.
+20. `audit_logs` không lưu trong database — tách ra OpenObserve cho khả năng mở rộng.
 21. `events.created_by` giữ `RESTRICT` vì chính sách soft delete, không xóa cứng.
 22. `event_questions.user_id` và `event_feedbacks.user_id` dùng `SET NULL` để giữ lịch sử khi có xóa cứng ngoại lệ.
 23. Địa điểm tách thành `campuses`, `buildings`, `rooms`.
@@ -121,7 +121,7 @@ ERD Final này là bản chốt để đi vào triển khai backend MVP, dựa t
 |---|---|---|
 | **event_moderation_logs** | Lịch sử kiểm duyệt sự kiện bởi admin | Admin duyệt event_123 lúc 10:00, action: approve |
 
-> **Ghi chú**: Audit logs (nhật ký hệ thống) được tách ra **OpenSearch/ELK stack** thay vì lưu trong database.
+> **Ghi chú**: Audit logs (nhật ký hệ thống) được tách ra **OpenObserve** thay vì lưu trong database.
 
 ### 3.8 Module Support
 

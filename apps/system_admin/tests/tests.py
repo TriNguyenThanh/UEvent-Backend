@@ -2,7 +2,7 @@ from django.test import SimpleTestCase
 
 from apps.system_admin.services.audit_service import AdminAuditService
 from apps.system_admin.services.csv_export_service import AdminCsvExportService
-from apps.system_admin.services.opensearch_audit_client import OpenSearchAuditClient
+from apps.system_admin.services.openobserve_audit_client import OpenObserveAuditClient
 from common.exceptions import ValidationError
 
 
@@ -33,6 +33,6 @@ class AdminPhase0FoundationTests(SimpleTestCase):
         self.assertEqual(response["Content-Disposition"], 'attachment; filename="users.csv"')
         self.assertIn("id,email", response.content.decode("utf-8"))
 
-    def test_opensearch_client_rejects_unknown_filters(self):
+    def test_openobserve_client_rejects_unknown_filters(self):
         with self.assertRaises(ValidationError):
-            OpenSearchAuditClient._validate_filters({"password": "secret"})
+            OpenObserveAuditClient._validate_filters({"password": "secret"})

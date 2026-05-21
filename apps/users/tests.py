@@ -19,6 +19,7 @@ from common.keycloak_admin import (
     exchange_token_for_user,
     get_or_create_keycloak_user,
     logout_keycloak_refresh_token,
+    refresh_keycloak_token,
 )
 
 
@@ -284,7 +285,9 @@ class KeycloakAdminClientTests(TestCase):
             exchange_payload["requested_token_type"],
             "urn:ietf:params:oauth:token-type:refresh_token",
         )
-        self.assertEqual(exchange_payload["scope"], "openid email profile")
+        self.assertEqual(
+            exchange_payload["scope"], "openid email profile offline_access"
+        )
         self.assertEqual(token_data["refresh_token"], "refresh-token")
 
     @override_settings(
@@ -306,6 +309,35 @@ class KeycloakAdminClientTests(TestCase):
         self.assertEqual(kwargs["data"]["refresh_token"], "refresh-token")
         self.assertEqual(kwargs["timeout"], 7)
 
+    @override_settings(
+        KEYCLOAK_TOKEN_URL="https://auth.example.test/token",
+        KEYCLOAK_ADMIN_CLIENT_ID="backend-client",
+        KEYCLOAK_ADMIN_CLIENT_SECRET="backend-secret",
+        KEYCLOAK_TOKEN_TIMEOUT=7,
+    )
+    @patch("common.keycloak_admin.requests.post")
+    def test_refresh_keycloak_token_uses_backend_client(self, mock_post):
+        mock_post.return_value = _Response(
+            200,
+            {
+                "access_token": "new-access-token",
+                "refresh_token": "new-refresh-token",
+                "expires_in": 300,
+                "refresh_expires_in": 1800,
+            },
+        )
+
+        token_data = refresh_keycloak_token("old-refresh-token")
+
+        mock_post.assert_called_once()
+        _, kwargs = mock_post.call_args
+        self.assertEqual(kwargs["data"]["grant_type"], "refresh_token")
+        self.assertEqual(kwargs["data"]["client_id"], "backend-client")
+        self.assertEqual(kwargs["data"]["client_secret"], "backend-secret")
+        self.assertEqual(kwargs["data"]["refresh_token"], "old-refresh-token")
+        self.assertEqual(kwargs["timeout"], 7)
+        self.assertEqual(token_data["access_token"], "new-access-token")
+
 
 class MobileLogoutViewTests(TestCase):
     def setUp(self):
@@ -321,6 +353,47 @@ class MobileLogoutViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_logout.assert_called_once_with("refresh-token")
+
+
+class MobileTokenRefreshViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    @patch("apps.users.auth_views.refresh_keycloak_token")
+    def test_mobile_refresh_returns_new_tokens(self, mock_refresh):
+        mock_refresh.return_value = {
+            "access_token": "new-access-token",
+            "refresh_token": "new-refresh-token",
+            "token_type": "Bearer",
+            "expires_in": 300,
+            "refresh_expires_in": 1800,
+        }
+
+        response = self.client.post(
+            reverse("users:mobile-token-refresh"),
+            {"refresh_token": "old-refresh-token"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["access_token"], "new-access-token")
+        self.assertEqual(response.data["data"]["refresh_token"], "new-refresh-token")
+        mock_refresh.assert_called_once_with("old-refresh-token")
+
+    @patch("apps.users.auth_views.refresh_keycloak_token")
+    def test_mobile_refresh_rejects_invalid_refresh_token(self, mock_refresh):
+        mock_refresh.side_effect = KeycloakAdminError(
+            "invalid refresh", status_code=400
+        )
+
+        response = self.client.post(
+            reverse("users:mobile-token-refresh"),
+            {"refresh_token": "old-refresh-token"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data["code"], "invalid_credentials")
 
 
 @override_settings(OTP_TTL_SECONDS=180, OTP_MAX_ATTEMPTS=3)

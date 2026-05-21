@@ -39,7 +39,7 @@ class CorsMiddleware:
 
 
 class RequestIdMiddleware:
-    """Gắn request_id vào request/response để correlation với log/OpenSearch."""
+    """Gắn request_id vào request/response để correlation với log/OpenObserve."""
 
     HEADER_NAME = 'X-Request-ID'
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timezone as datetime_timezone
 from uuid import UUID
 from typing import Any
 
@@ -12,7 +13,7 @@ from common.response_codes import ResponseCode
 from .audit_service import AdminAuditService
 from .csv_export_service import AdminCsvExportService
 from .excel_export_service import AdminExcelExportService
-from .opensearch_audit_client import OpenSearchAuditClient, OpenSearchAuditClientError, OpenSearchAuditQuery
+from .openobserve_audit_client import OpenObserveAuditClient, OpenObserveAuditClientError, OpenObserveAuditQuery
 
 
 class AuditSearchUnavailableError(BaseAPIException):
@@ -37,10 +38,10 @@ class AdminAuditLogService:
     ]
 
     @classmethod
-    def search_logs(cls, *, filters: dict, client: OpenSearchAuditClient | None = None) -> dict:
+    def search_logs(cls, *, filters: dict, client: OpenObserveAuditClient | None = None) -> dict:
         page = max(1, int(filters.get("page") or 1))
         page_size = max(1, min(100, int(filters.get("page_size") or 20)))
-        query = OpenSearchAuditQuery(
+        query = OpenObserveAuditQuery(
             filters=cls._build_term_filters(filters),
             date_from=filters.get("date_from"),
             date_to=filters.get("date_to"),
@@ -108,9 +109,9 @@ class AdminAuditLogService:
         )
 
     @classmethod
-    def get_summary(cls, *, client: OpenSearchAuditClient | None = None) -> dict:
+    def get_summary(cls, *, client: OpenObserveAuditClient | None = None) -> dict:
         now = timezone.now()
-        query = OpenSearchAuditQuery(
+        query = OpenObserveAuditQuery(
             filters={},
             date_from=now - timezone.timedelta(hours=24),
             date_to=now,
@@ -162,10 +163,10 @@ class AdminAuditLogService:
         }
 
     @staticmethod
-    def _execute_search(query: OpenSearchAuditQuery, *, client: OpenSearchAuditClient | None = None) -> dict:
+    def _execute_search(query: OpenObserveAuditQuery, *, client: OpenObserveAuditClient | None = None) -> dict:
         try:
-            return (client or OpenSearchAuditClient()).search(query)
-        except OpenSearchAuditClientError as exc:
+            return (client or OpenObserveAuditClient()).search(query)
+        except OpenObserveAuditClientError as exc:
             raise AuditSearchUnavailableError(detail=str(exc), code=ResponseCode.AUDIT_SEARCH_UNAVAILABLE) from exc
 
     @staticmethod
@@ -216,8 +217,15 @@ class AdminAuditLogService:
 
     @staticmethod
     def _parse_timestamp(source: dict) -> timezone.datetime:
-        value = source.get("event_time") or source.get("timestamp") or source.get("@timestamp")
+        value = source.get("event_time") or source.get("timestamp") or source.get("@timestamp") or source.get("_timestamp")
+        if isinstance(value, (int, float)):
+            seconds = value / 1_000_000 if value > 10_000_000_000 else value
+            return timezone.datetime.fromtimestamp(seconds, tz=datetime_timezone.utc)
         if isinstance(value, str):
+            if value.isdigit():
+                raw_timestamp = int(value)
+                seconds = raw_timestamp / 1_000_000 if raw_timestamp > 10_000_000_000 else raw_timestamp
+                return timezone.datetime.fromtimestamp(seconds, tz=datetime_timezone.utc)
             parsed = timezone.datetime.fromisoformat(value.replace("Z", "+00:00"))
             return parsed if timezone.is_aware(parsed) else timezone.make_aware(parsed)
         return timezone.now()

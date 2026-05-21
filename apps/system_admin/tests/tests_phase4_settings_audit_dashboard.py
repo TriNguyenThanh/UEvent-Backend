@@ -107,7 +107,7 @@ class AdminPhase4SettingsAuditDashboardTests(TestCase):
         )
         self.assert_error_envelope(protected_response, expected_status=400)
 
-    @patch("apps.system_admin.services.audit_log_services.OpenSearchAuditClient.search")
+    @patch("apps.system_admin.services.audit_log_services.OpenObserveAuditClient.search")
     def test_audit_log_list_export_and_permission(self, search_mock):
         now = timezone.now()
         search_mock.return_value = {
@@ -175,7 +175,7 @@ class AdminPhase4SettingsAuditDashboardTests(TestCase):
 
         self.assert_error_envelope(response, expected_status=400)
 
-    @patch("apps.system_admin.services.audit_log_services.OpenSearchAuditClient.search")
+    @patch("apps.system_admin.services.audit_log_services.OpenObserveAuditClient.search")
     def test_dashboard_overview_uses_real_domain_counts(self, search_mock):
         search_mock.return_value = {"hits": {"total": {"value": 0}, "hits": []}}
         self.authenticate_admin()
