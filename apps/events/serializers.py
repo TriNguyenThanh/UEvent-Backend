@@ -1,8 +1,17 @@
+from pathlib import PurePath
+
 from rest_framework import serializers
 
 from apps.events.models import Event, EventCategory, EventOrganizer, RegistrationFormField
 from apps.locations.models import Room
 from apps.users.models import User
+
+
+ALLOWED_EVENT_UPLOAD_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
 
 
 class OrganizerEventCategorySummarySerializer(serializers.ModelSerializer):
@@ -256,3 +265,28 @@ class OrganizerEventInputSerializer(serializers.Serializer):
 
     def to_service_data(self):
         return dict(self.validated_data)
+
+
+class OrganizerEventPresignedUrlInputSerializer(serializers.Serializer):
+    file_name = serializers.CharField(max_length=255)
+    content_type = serializers.ChoiceField(
+        choices=sorted(ALLOWED_EVENT_UPLOAD_CONTENT_TYPES),
+        default="image/jpeg",
+        required=False,
+    )
+
+    def validate_file_name(self, value):
+        file_name = PurePath(value).name.strip()
+        if not file_name:
+            raise serializers.ValidationError("File name cannot be blank.")
+        if "." not in file_name:
+            raise serializers.ValidationError("File name must include an extension.")
+        return file_name
+
+
+class OrganizerEventPresignedUrlOutputSerializer(serializers.Serializer):
+    object_key = serializers.CharField()
+    presigned_url = serializers.URLField()
+    public_url = serializers.URLField()
+    method = serializers.CharField()
+    expires_in = serializers.IntegerField()
