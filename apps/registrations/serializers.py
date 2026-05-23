@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.events.serializers import EventCoverImageUrlMixin
 from apps.events.models import EventOrganizer
 from apps.registrations.models import EventRegistration
 from apps.registrations.models import Ticket
@@ -20,7 +21,7 @@ class RegistrationCreateSerializer(serializers.Serializer):
         return attrs
 
 
-class RegistrationEventSerializer(serializers.Serializer):
+class RegistrationEventSerializer(EventCoverImageUrlMixin, serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     title = serializers.CharField(read_only=True)
     slug = serializers.CharField(read_only=True)
@@ -29,7 +30,6 @@ class RegistrationEventSerializer(serializers.Serializer):
     start_at = serializers.DateTimeField(read_only=True)
     end_at = serializers.DateTimeField(read_only=True)
     location_snapshot = serializers.CharField(read_only=True, allow_null=True)
-    cover_image_url = serializers.URLField(read_only=True, allow_null=True)
 
 
 class RegistrationTicketSummarySerializer(serializers.Serializer):

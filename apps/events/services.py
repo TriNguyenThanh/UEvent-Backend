@@ -147,7 +147,7 @@ class OrganizerEventService:
             end_at=data.get("end_at"),
             max_capacity=data.get("max_capacity"),
             location_snapshot=data.get("location_snapshot"),
-            cover_image_url=data.get("cover_image_url"),
+            cover_image_key=data.get("cover_image_key"),
             deep_link=data.get("deep_link"),
         )
 
@@ -203,6 +203,18 @@ class OrganizerEventService:
 
 
 class PublicEventService:
+    PUBLIC_EVENT_STATUSES = {Event.Status.APPROVED, Event.Status.ACTIVE}
+
+    @staticmethod
+    def _public_events_with_related() -> QuerySet[Event]:
+        return (
+            Event.objects
+            .select_related("category", "room__building__campus")
+            .prefetch_related(
+                Prefetch("registration_fields", queryset=RegistrationFormField.objects.order_by("sort_order")),
+            )
+        )
+
     @staticmethod
     def search_public_events(
         *,
@@ -212,10 +224,9 @@ class PublicEventService:
         ordering=None,
     ) -> QuerySet[Event]:
         """Search public events visible to every role."""
-        public_statuses = {Event.Status.APPROVED, Event.Status.ACTIVE}
         queryset = Event.objects.filter(
             visibility=Event.Visibility.PUBLIC,
-            status__in=public_statuses,
+            status__in=PublicEventService.PUBLIC_EVENT_STATUSES,
         )
 
         if search:
@@ -226,7 +237,7 @@ class PublicEventService:
             queryset = queryset.filter(
                 Q(category__slug__iexact=category) | Q(category__name__icontains=category)
             )
-        if status in public_statuses:
+        if status in PublicEventService.PUBLIC_EVENT_STATUSES:
             queryset = queryset.filter(status=status)
 
         valid_ordering = {"start_at", "created_at", "updated_at", "title"}
@@ -236,6 +247,18 @@ class PublicEventService:
             queryset = queryset.order_by("start_at", "-created_at")
 
         return queryset.select_related("category", "created_by")
+
+    @staticmethod
+    def get_public_event(event_id) -> Event:
+        """Get a single public event visible to users."""
+        try:
+            return PublicEventService._public_events_with_related().get(
+                pk=event_id,
+                visibility=Event.Visibility.PUBLIC,
+                status__in=PublicEventService.PUBLIC_EVENT_STATUSES,
+            )
+        except Event.DoesNotExist:
+            raise NotFoundError(f"Event with ID {event_id} does not exist.")
 
 
 class UserEventService:

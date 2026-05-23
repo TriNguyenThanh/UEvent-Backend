@@ -14,6 +14,7 @@ from apps.events.serializers import (
     OrganizerEventPresignedUrlInputSerializer,
     OrganizerEventPresignedUrlOutputSerializer,
     PublicEventCategorySerializer,
+    PublicEventDetailOutputSerializer,
     PublicEventSearchQuerySerializer,
     PublicEventSearchOutputSerializer,
 )
@@ -105,6 +106,24 @@ class PublicEventSearchView(generics.ListAPIView):
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
+        return success_response(data=serializer.data)
+
+
+class PublicEventDetailView(APIView):
+    """
+    GET /api/v1/events/<uuid>/ - Get public event detail for users
+    """
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(
+        operation_summary="Get Public Event Detail",
+        operation_description="Get a public approved or active event detail for users.",
+        responses={200: PublicEventDetailOutputSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        tags=["Events"],
+    )
+    def get(self, request, pk):
+        event = PublicEventService.get_public_event(pk)
+        serializer = PublicEventDetailOutputSerializer(event)
         return success_response(data=serializer.data)
 
 
@@ -233,8 +252,8 @@ class OrganizerEventPresignedUrlView(APIView):
         output_serializer = OrganizerEventPresignedUrlOutputSerializer(
             {
                 "object_key": object_key,
+                "presigned_upload_url": presigned_url,
                 "presigned_url": presigned_url,
-                "public_url": s3_client.build_url(object_key),
                 "method": "PUT",
                 "expires_in": expires_in,
             }

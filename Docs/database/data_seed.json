@@ -475,7 +475,7 @@
       "end_at": "2026-06-01T04:00:00Z",
       "max_capacity": 80,
       "location_snapshot": "UTC2 - Hội trường C1, 450-451 Lê Văn Việt, TP. Thủ Đức",
-      "cover_image_url": "https://example.com/images/utc2-global-thinking-future-journey.jpg",
+      "cover_image_key": "events/38a7b056-9072-4657-b55e-787f9c7c78ef/covers/f1b694d523de4ec4bed3adf2c356a946-5967d457-dd69-4ee0-ad1e-86373078a665.jpg",
       "deep_link": "uevent://events/talkshow-global-thinking-future-journey-2026"
     }
   },
@@ -501,7 +501,7 @@
       "end_at": "2026-06-08T10:00:00Z",
       "max_capacity": 120,
       "location_snapshot": "UTC2 - Hội trường/Cụm phòng số 002, TP. Thủ Đức",
-      "cover_image_url": "https://example.com/images/utc2-event-002.jpg",
+      "cover_image_key": "events/38a7b056-9072-4657-b55e-787f9c7c78ef/covers/f1b694d523de4ec4bed3adf2c356a946-5967d457-dd69-4ee0-ad1e-86373078a665.jpg",
       "deep_link": "uevent://events/utc2-su-kien-002-2026"
     }
   },
@@ -527,7 +527,7 @@
       "end_at": "2026-06-15T11:00:00Z",
       "max_capacity": 60,
       "location_snapshot": "UTC2 - Hội trường/Cụm phòng số 003, TP. Thủ Đức",
-      "cover_image_url": "https://example.com/images/utc2-event-003.jpg",
+      "cover_image_key": "events/38a7b056-9072-4657-b55e-787f9c7c78ef/covers/f1b694d523de4ec4bed3adf2c356a946-5967d457-dd69-4ee0-ad1e-86373078a665.jpg",
       "deep_link": "uevent://events/utc2-su-kien-003-2026"
     }
   },
