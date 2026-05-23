@@ -1,9 +1,13 @@
+import hashlib
 from pathlib import PurePath
 
+from django.conf import settings
+from django.core.cache import cache
 from rest_framework import serializers
 
 from apps.events.models import Event, EventCategory, EventOrganizer, RegistrationFormField
 from apps.locations.models import Room
+from apps.utils.s3 import S3Client
 from apps.users.models import User
 
 
@@ -68,7 +72,49 @@ class OrganizerRegistrationFormFieldOutputSerializer(serializers.ModelSerializer
         ]
 
 
-class OrganizerEventListOutputSerializer(serializers.ModelSerializer):
+class EventCoverImageUrlMixin(serializers.Serializer):
+    cover_image_url = serializers.SerializerMethodField()
+
+    def get_cover_image_url(self, obj):
+        object_key = getattr(obj, "cover_image_key", None)
+        if not object_key:
+            return None
+
+        cache_key = self._cover_image_cache_key(object_key)
+        cached_url = cache.get(cache_key)
+        if cached_url:
+            return cached_url
+
+        s3_client = getattr(self, "_cover_image_s3_client", None)
+        if s3_client is None:
+            s3_client = S3Client()
+            self._cover_image_s3_client = s3_client
+
+        expires_in = settings.AWS_S3_PRESIGNED_URL_EXPIRES
+        presigned_url = s3_client.generate_presigned_url(
+            object_key,
+            method="get_object",
+            expires_in=expires_in,
+        )
+        cache_timeout = self._cover_image_cache_timeout(expires_in)
+        if cache_timeout > 0:
+            cache.set(cache_key, presigned_url, timeout=cache_timeout)
+        return presigned_url
+
+    @staticmethod
+    def _cover_image_cache_key(object_key):
+        digest = hashlib.sha256(object_key.encode("utf-8")).hexdigest()
+        expires_in = settings.AWS_S3_PRESIGNED_URL_EXPIRES
+        return f"events:cover_image_url:v1:{expires_in}:{digest}"
+
+    @staticmethod
+    def _cover_image_cache_timeout(expires_in):
+        configured_timeout = settings.AWS_S3_PRESIGNED_GET_URL_CACHE_TTL
+        safe_timeout = max(0, expires_in - 60)
+        return min(configured_timeout, safe_timeout)
+
+
+class OrganizerEventListOutputSerializer(EventCoverImageUrlMixin, serializers.ModelSerializer):
     category = OrganizerEventCategorySummarySerializer(read_only=True)
 
     class Meta:
@@ -98,6 +144,33 @@ class PublicEventSearchOutputSerializer(OrganizerEventListOutputSerializer):
             "location_snapshot",
             "deep_link",
         ]
+
+
+class PublicEventDetailOutputSerializer(PublicEventSearchOutputSerializer):
+    room = serializers.SerializerMethodField()
+    registration_fields = OrganizerRegistrationFormFieldOutputSerializer(many=True, read_only=True)
+
+    class Meta(PublicEventSearchOutputSerializer.Meta):
+        fields = PublicEventSearchOutputSerializer.Meta.fields + [
+            "room",
+            "registration_fields",
+            "cancellation_deadline_at",
+        ]
+
+    def get_room(self, obj):
+        room = obj.room
+        if room is None:
+            return None
+
+        building = getattr(room, "building", None)
+        campus = getattr(building, "campus", None) if building is not None else None
+        return {
+            "id": room.id,
+            "name": room.name,
+            "code": room.code,
+            "building_name": getattr(building, "name", ""),
+            "campus_name": getattr(campus, "name", ""),
+        }
 
 
 class PublicEventSearchQuerySerializer(serializers.Serializer):
@@ -146,6 +219,7 @@ class OrganizerEventDetailOutputSerializer(OrganizerEventListOutputSerializer):
             "registration_close_at",
             "cancellation_deadline_at",
             "location_snapshot",
+            "cover_image_key",
             "deep_link",
         ]
 
@@ -184,7 +258,13 @@ class OrganizerEventInputSerializer(serializers.Serializer):
     location_snapshot = serializers.CharField(
         required=False, allow_blank=True, allow_null=True, default=None
     )
-    cover_image_url = serializers.URLField(required=False, allow_blank=True, allow_null=True, default=None)
+    cover_image_key = serializers.CharField(
+        max_length=500,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        default=None,
+    )
     deep_link = serializers.CharField(
         required=False, allow_blank=True, allow_null=True, default=None
     )
@@ -228,6 +308,16 @@ class OrganizerEventInputSerializer(serializers.Serializer):
         if value is not None and value <= 0:
             raise serializers.ValidationError("Max capacity must be a positive number.")
         return value
+
+    def validate_cover_image_key(self, value):
+        if value in (None, ""):
+            return value
+        clean_value = value.strip().lstrip("/")
+        if clean_value.startswith(("http://", "https://")):
+            raise serializers.ValidationError("Cover image must be an S3 object key, not a URL.")
+        if not clean_value.startswith("events/"):
+            raise serializers.ValidationError("Cover image key must be under the events/ prefix.")
+        return clean_value
 
     # ---- cross-field validations ----
 
@@ -286,7 +376,7 @@ class OrganizerEventPresignedUrlInputSerializer(serializers.Serializer):
 
 class OrganizerEventPresignedUrlOutputSerializer(serializers.Serializer):
     object_key = serializers.CharField()
+    presigned_upload_url = serializers.URLField()
     presigned_url = serializers.URLField()
-    public_url = serializers.URLField()
     method = serializers.CharField()
     expires_in = serializers.IntegerField()

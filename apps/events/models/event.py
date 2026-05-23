@@ -36,7 +36,7 @@ class Event(BaseModel):
     end_at = models.DateTimeField()
     max_capacity = models.PositiveIntegerField(null=True, blank=True)
     location_snapshot = models.CharField(max_length=500, blank=True, null=True)
-    cover_image_url = models.URLField(blank=True, null=True)
+    cover_image_key = models.CharField(max_length=500, blank=True, null=True)
     deep_link = models.CharField(max_length=500, blank=True, null=True)
 
     class Meta(BaseModel.Meta):
@@ -52,5 +52,4 @@ class Event(BaseModel):
 
     def __str__(self):
         return self.title
-
 

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.events.models import Event, EventCategory
+from apps.events.serializers import EventCoverImageUrlMixin
 from apps.moderation.models import ModerationLog
 from apps.users.models import User
 
@@ -33,7 +34,7 @@ class AdminModerationLogOutputSerializer(serializers.ModelSerializer):
         fields = ["id", "admin_user", "report_type", "action", "reason", "created_at"]
 
 
-class AdminEventListOutputSerializer(serializers.ModelSerializer):
+class AdminEventListOutputSerializer(EventCoverImageUrlMixin, serializers.ModelSerializer):
     category = AdminEventCategorySummarySerializer(read_only=True)
     created_by = AdminEventUserSummarySerializer(read_only=True)
     room = serializers.SerializerMethodField()

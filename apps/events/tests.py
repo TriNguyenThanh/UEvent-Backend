@@ -1,11 +1,14 @@
 import uuid
 from datetime import timedelta
+from unittest.mock import Mock, patch
 
+from django.core.cache import cache
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.events.models import Event, EventCategory, EventOrganizer
+from apps.events.models import Event, EventCategory, EventOrganizer, RegistrationFormField
 from apps.locations.models import Building, Campus, Room
 from apps.registrations.models import EventRegistration
 from apps.users.models import User
@@ -13,6 +16,7 @@ from apps.users.models import User
 
 class TestOrganizerEventCRUD(APITestCase):
     def setUp(self):
+        cache.clear()
         self.organizer = User.objects.create_user(
             username="organizer",
             password="pass123",
@@ -186,6 +190,91 @@ class TestOrganizerEventCRUD(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["data"]["title"], "Updated Title")
 
+    def test_organizer_patch_stores_cover_image_key_and_returns_presigned_get_url(self):
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Image Event",
+            slug="image-event-1",
+            **self.valid_times,
+        )
+        s3_client = Mock()
+        s3_client.generate_presigned_url.return_value = "https://s3.test/events/image.jpg?signature=abc"
+
+        self.client.force_authenticate(user=self.organizer)
+        with patch("apps.events.serializers.S3Client", return_value=s3_client):
+            response = self.client.patch(
+                f"/api/v1/organizer/events/{event.id}/",
+                {"cover_image_key": "events/user-1/covers/image.jpg"},
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event.refresh_from_db()
+        self.assertEqual(event.cover_image_key, "events/user-1/covers/image.jpg")
+        self.assertEqual(
+            response.data["data"]["cover_image_url"],
+            "https://s3.test/events/image.jpg?signature=abc",
+        )
+        s3_client.generate_presigned_url.assert_called_with(
+            "events/user-1/covers/image.jpg",
+            method="get_object",
+            expires_in=3600,
+        )
+
+    @override_settings(AWS_S3_PRESIGNED_URL_EXPIRES=3600, AWS_S3_PRESIGNED_GET_URL_CACHE_TTL=300)
+    def test_cover_image_presigned_get_url_is_cached_by_object_key(self):
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Cached Image Event",
+            slug="cached-image-event",
+            cover_image_key="events/user-1/covers/cached.jpg",
+            **self.valid_times,
+        )
+        s3_client = Mock()
+        s3_client.generate_presigned_url.return_value = "https://s3.test/cached.jpg?signature=abc"
+
+        self.client.force_authenticate(user=self.organizer)
+        with patch("apps.events.serializers.S3Client", return_value=s3_client):
+            first_response = self.client.get(f"/api/v1/organizer/events/{event.id}/")
+            second_response = self.client.get(f"/api/v1/organizer/events/{event.id}/")
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            second_response.data["data"]["cover_image_url"],
+            "https://s3.test/cached.jpg?signature=abc",
+        )
+        s3_client.generate_presigned_url.assert_called_once_with(
+            "events/user-1/covers/cached.jpg",
+            method="get_object",
+            expires_in=3600,
+        )
+
+    @override_settings(AWS_S3_PRESIGNED_URL_EXPIRES=120, AWS_S3_PRESIGNED_GET_URL_CACHE_TTL=300)
+    def test_cover_image_cache_timeout_stays_below_presigned_expiry(self):
+        from apps.events.serializers import EventCoverImageUrlMixin
+
+        self.assertEqual(EventCoverImageUrlMixin._cover_image_cache_timeout(120), 60)
+
+    def test_organizer_patch_rejects_cover_image_url_as_storage_contract(self):
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Image Event",
+            slug="image-event-url-reject",
+            **self.valid_times,
+        )
+        self.client.force_authenticate(user=self.organizer)
+        response = self.client.patch(
+            f"/api/v1/organizer/events/{event.id}/",
+            {"cover_image_key": "https://s3.test/events/image.jpg?signature=abc"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_organizer_can_patch_event_category_and_clear_room(self):
         new_category = EventCategory.objects.create(
             name="Conference",
@@ -313,6 +402,28 @@ class TestOrganizerEventCRUD(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @override_settings(AWS_S3_PRESIGNED_URL_EXPIRES=900)
+    def test_presigned_upload_url_response_returns_object_key_not_public_url(self):
+        s3_client = Mock()
+        s3_client.generate_presigned_url.return_value = "https://s3.test/upload?signature=abc"
+
+        self.client.force_authenticate(user=self.organizer)
+        with patch("apps.events.views.S3Client", return_value=s3_client):
+            response = self.client.post(
+                "/api/v1/organizer/events/presigned-url/",
+                {"file_name": "cover.jpg", "content_type": "image/jpeg"},
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data["data"]
+        self.assertTrue(data["object_key"].startswith(f"events/{self.organizer.id}/covers/"))
+        self.assertEqual(data["presigned_upload_url"], "https://s3.test/upload?signature=abc")
+        self.assertEqual(data["presigned_url"], "https://s3.test/upload?signature=abc")
+        self.assertNotIn("public_url", data)
+        self.assertEqual(data["method"], "PUT")
+        self.assertEqual(data["expires_in"], 900)
+
     def test_anonymous_user_can_search_public_events(self):
         Event.objects.create(
             category=self.category,
@@ -368,6 +479,65 @@ class TestOrganizerEventCRUD(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 1)
         self.assertEqual(response.data["data"][0]["title"], "Active Public Event")
+
+    def test_anonymous_user_can_retrieve_public_event_detail(self):
+        campus = Campus.objects.create(name="Main Campus", code="MAIN")
+        building = Building.objects.create(name="Main Building", code="MB", campus=campus)
+        room = Room.objects.create(name="Auditorium", code="A1", building=building)
+        event = Event.objects.create(
+            category=self.category,
+            room=room,
+            created_by=self.organizer,
+            title="Public Detail Event",
+            slug="public-detail-event",
+            description="Detail page content",
+            visibility=Event.Visibility.PUBLIC,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+        RegistrationFormField.objects.create(
+            event=event,
+            field_key="shirt_size",
+            label="Shirt size",
+            field_type="select",
+            options_json=["S", "M", "L"],
+            sort_order=1,
+        )
+
+        response = self.client.get(f"/api/v1/events/{event.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["title"], "Public Detail Event")
+        self.assertEqual(response.data["data"]["room"]["code"], "A1")
+        self.assertEqual(response.data["data"]["registration_fields"][0]["field_key"], "shirt_size")
+        self.assertNotIn("organizers", response.data["data"])
+        self.assertNotIn("created_by", response.data["data"])
+
+    def test_public_event_detail_hides_private_or_unpublished_events(self):
+        draft_event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Draft Event",
+            slug="draft-detail-event",
+            visibility=Event.Visibility.PUBLIC,
+            status=Event.Status.DRAFT,
+            **self.valid_times,
+        )
+        private_event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Private Event",
+            slug="private-detail-event",
+            visibility=Event.Visibility.PRIVATE,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+
+        draft_response = self.client.get(f"/api/v1/events/{draft_event.id}/")
+        private_response = self.client.get(f"/api/v1/events/{private_event.id}/")
+
+        self.assertEqual(draft_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(private_response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_user_event_highlights_prioritizes_registered_events_regardless_status(self):
         attendee = User.objects.create_user(username="attendee", password="pass123")

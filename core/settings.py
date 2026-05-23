@@ -141,6 +141,10 @@ AWS_S3_OBJECT_PARAMETERS = {
     "CacheControl": env("AWS_S3_CACHE_CONTROL", default="max-age=86400"),
 }
 AWS_S3_PRESIGNED_URL_EXPIRES = env.int("AWS_S3_PRESIGNED_URL_EXPIRES", default=3600)
+AWS_S3_PRESIGNED_GET_URL_CACHE_TTL = env.int(
+    "AWS_S3_PRESIGNED_GET_URL_CACHE_TTL",
+    default=max(0, AWS_S3_PRESIGNED_URL_EXPIRES - 60),
+)
 
 KEYCLOAK_SERVER_URL = env("KEYCLOAK_SERVER_URL", default="http://localhost").rstrip("/")
 KEYCLOAK_REALM = env("KEYCLOAK_REALM", default="test-realm")
