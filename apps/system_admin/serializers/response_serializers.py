@@ -77,6 +77,26 @@ class AdminSupportTicketStatisticsEnvelopeResponseSerializer(ApiSuccessResponseS
     """Envelope response cho admin support ticket statistics."""
 
 
+class AdminTicketEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin ticket detail/action."""
+
+
+class AdminTicketListEnvelopeResponseSerializer(PaginatedApiResponseSerializer):
+    """Envelope response cho admin ticket list."""
+
+
+class AdminTicketStatisticsEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin ticket statistics."""
+
+
+class AdminCheckinLogListEnvelopeResponseSerializer(PaginatedApiResponseSerializer):
+    """Envelope response cho admin ticket check-in logs."""
+
+
+class AdminTicketScanEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin ticket check-in scan."""
+
+
 class AdminNotificationEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
     """Envelope response cho admin notification detail/action."""
 

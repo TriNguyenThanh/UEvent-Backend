@@ -9,6 +9,7 @@ from .views import (
     notification_views,
     settings_views,
     support_views,
+    ticket_views,
     user_views,
 )
 
@@ -55,6 +56,16 @@ urlpatterns = [
     path("support/tickets/<uuid:pk>/messages/", support_views.AdminSupportTicketMessagesView.as_view(), name="support-ticket-messages"),
     path("support/tickets/<uuid:pk>/resolve/", support_views.AdminSupportTicketResolveView.as_view(), name="support-ticket-resolve"),
     path("support/tickets/<uuid:pk>/escalate/", support_views.AdminSupportTicketEscalateView.as_view(), name="support-ticket-escalate"),
+
+    # Tickets / Registrations / Check-in
+    path("tickets/", ticket_views.AdminTicketListView.as_view(), name="ticket-list"),
+    path("tickets/statistics/", ticket_views.AdminTicketStatisticsView.as_view(), name="ticket-statistics"),
+    path("tickets/export/", ticket_views.AdminTicketExportView.as_view(), name="ticket-export"),
+    path("tickets/checkins/", ticket_views.AdminCheckinLogListView.as_view(), name="ticket-checkin-list"),
+    path("tickets/checkins/scan/", ticket_views.AdminTicketCheckinScanView.as_view(), name="ticket-checkin-scan"),
+    path("tickets/<uuid:pk>/", ticket_views.AdminTicketDetailView.as_view(), name="ticket-detail"),
+    path("tickets/<uuid:pk>/cancel/", ticket_views.AdminTicketCancelView.as_view(), name="ticket-cancel"),
+    path("tickets/<uuid:pk>/restore/", ticket_views.AdminTicketRestoreView.as_view(), name="ticket-restore"),
 
     # Notifications
     path("notifications/", notification_views.AdminNotificationListCreateView.as_view(), name="notification-list"),

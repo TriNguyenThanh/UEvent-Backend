@@ -251,7 +251,7 @@ def process_checkin_scan(
                 registration = ticket.registration
                 if registration.event_id != event.id:
                     result = CheckinLog.CheckinResult.INVALID_TICKET
-                elif event.status != Event.Status.ACTIVE:
+                elif event.status not in {Event.Status.APPROVED, Event.Status.ACTIVE}:
                     result = CheckinLog.CheckinResult.EVENT_UNAVAILABLE
                 elif event.start_at and event.start_at > now:
                     result = CheckinLog.CheckinResult.EVENT_UNAVAILABLE
