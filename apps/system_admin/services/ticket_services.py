@@ -263,15 +263,27 @@ class AdminTicketService:
         cls,
         *,
         event_id: str | None = None,
+        ticket_id: str | None = None,
+        user_id: str | None = None,
         result: str | None = None,
         search: str | None = None,
         date_from: str | None = None,
         date_to: str | None = None,
     ) -> QuerySet[CheckinLog]:
-        queryset = CheckinLog.objects.select_related("event", "ticket", "scanner_user")
+        queryset = CheckinLog.objects.select_related(
+            "event",
+            "ticket",
+            "ticket__registration",
+            "ticket__registration__user",
+            "scanner_user",
+        )
 
         if event_id:
             queryset = queryset.filter(event_id=event_id)
+        if ticket_id:
+            queryset = queryset.filter(ticket_id=ticket_id)
+        if user_id:
+            queryset = queryset.filter(ticket__registration__user_id=user_id)
         if result:
             queryset = queryset.filter(result=result)
         if search:
