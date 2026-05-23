@@ -312,14 +312,14 @@ class AdminTicketService:
 
         if export_format in {"xlsx", "excel"}:
             return AdminExcelExportService.build_response(
-                filename="admin_tickets.xlsx",
+                filename="tickets_export.xlsx",
                 headers=cls.EXPORT_HEADERS,
                 rows=rows,
                 sheet_name="Tickets",
             )
 
         return AdminCsvExportService.build_response(
-            filename="admin_tickets.csv",
+            filename="tickets_export.csv",
             headers=cls.EXPORT_HEADERS,
             rows=rows,
         )
