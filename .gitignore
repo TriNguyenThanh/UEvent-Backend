@@ -250,3 +250,5 @@ CLAUDE.md
 .claude/skills/gitnexus/
 .env.production
 firebase-service-account.json
+
+.codegraph

@@ -11,6 +11,7 @@ from apps.events.serializers import (
     OrganizerEventDetailOutputSerializer,
     OrganizerEventInputSerializer,
     OrganizerEventListOutputSerializer,
+    OrganizerEventListWithRoleOutputSerializer,
     OrganizerEventPresignedUrlInputSerializer,
     OrganizerEventPresignedUrlOutputSerializer,
     PublicEventCategorySerializer,
@@ -123,7 +124,7 @@ class PublicEventDetailView(APIView):
     )
     def get(self, request, pk):
         event = PublicEventService.get_public_event(pk)
-        serializer = PublicEventDetailOutputSerializer(event)
+        serializer = PublicEventDetailOutputSerializer(event, context={"request": request})
         return success_response(data=serializer.data)
 
 
@@ -170,7 +171,7 @@ class OrganizerEventListCreateView(generics.ListCreateAPIView):
     def get_serializer_class(self):
         if self.request.method == "POST":
             return OrganizerEventInputSerializer
-        return OrganizerEventListOutputSerializer
+        return OrganizerEventListWithRoleOutputSerializer
 
     @swagger_auto_schema(
         operation_summary="List Organizer Events",
@@ -184,7 +185,7 @@ class OrganizerEventListCreateView(generics.ListCreateAPIView):
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
             openapi.Parameter("page_size", openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
         ],
-        responses={200: OrganizerEventListOutputSerializer(many=True), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        responses={200: OrganizerEventListWithRoleOutputSerializer(many=True), **ORGANIZER_EVENT_ERROR_RESPONSES},
         tags=["Organizer Events"],
     )
     def get(self, request, *args, **kwargs):

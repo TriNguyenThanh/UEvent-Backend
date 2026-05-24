@@ -33,7 +33,7 @@ class RegistrationEventSerializer(EventCoverImageUrlMixin, serializers.Serialize
 
 
 class RegistrationTicketSummarySerializer(serializers.Serializer):
-    id = serializers.UUIDField(read_only=True)
+    registration_id = serializers.UUIDField(source="registration.id", read_only=True)
     ticket_code = serializers.CharField(read_only=True)
     status = serializers.CharField(read_only=True)
     issued_at = serializers.DateTimeField(read_only=True)
@@ -101,12 +101,21 @@ class EventRoleSerializer(serializers.ModelSerializer):
 class RegistrationQrSerializer(serializers.Serializer):
     registration_id = serializers.UUIDField(read_only=True)
     event_id = serializers.UUIDField(read_only=True)
-    ticket_id = serializers.UUIDField(read_only=True)
     ticket_code = serializers.CharField(read_only=True)
     qr_payload = serializers.CharField(read_only=True)
     qr_signature = serializers.CharField(read_only=True)
     valid_from = serializers.DateTimeField(read_only=True)
     valid_to = serializers.DateTimeField(read_only=True)
+
+
+class TicketUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ticket
+        fields = ["status", "expires_at"]
+        extra_kwargs = {
+            "status": {"required": False},
+            "expires_at": {"required": False},
+        }
 
 
 class TicketDetailSerializer(serializers.ModelSerializer):
@@ -116,7 +125,6 @@ class TicketDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
         fields = [
-            "id",
             "registration_id",
             "ticket_code",
             "status",

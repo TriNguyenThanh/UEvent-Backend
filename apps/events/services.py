@@ -138,7 +138,7 @@ class OrganizerEventService:
             title=data.get("title", ""),
             description=data.get("description", ""),
             visibility=data.get("visibility", Event.Visibility.PUBLIC),
-            status=Event.Status.DRAFT,
+            status=data.get("status", Event.Status.DRAFT),
             slug=slug,
             registration_open_at=data.get("registration_open_at"),
             registration_close_at=data.get("registration_close_at"),
@@ -209,7 +209,7 @@ class PublicEventService:
     def _public_events_with_related() -> QuerySet[Event]:
         return (
             Event.objects
-            .select_related("category", "room__building__campus")
+            .select_related("category", "created_by", "room__building__campus")
             .prefetch_related(
                 Prefetch("registration_fields", queryset=RegistrationFormField.objects.order_by("sort_order")),
             )
@@ -259,7 +259,6 @@ class PublicEventService:
             )
         except Event.DoesNotExist:
             raise NotFoundError(f"Event with ID {event_id} does not exist.")
-
 
 class UserEventService:
     @staticmethod

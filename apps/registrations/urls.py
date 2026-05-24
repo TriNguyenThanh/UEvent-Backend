@@ -1,30 +1,20 @@
 from django.urls import path
 
 from apps.registrations.views import (
-    EventRegistrationDetailView,
     EventRegistrationListCreateView,
     MyEventRegistrationCancelView,
-    MyRegistrationListView,
-    OrganizerEventRegistrationListView,
+    MyRegisteredEventListView,
     OrganizerRegistrationGrantCohostView,
-    OrganizerRegistrationCancelView,
     TicketCancelView,
     TicketDetailView,
-    TicketListView,
     TicketQrAPIView,
 )
 
 urlpatterns = [
-    path("registrations/me/", MyRegistrationListView.as_view(), name="registration-me-list"),
     path(
-        "organizer/events/<uuid:event_id>/registrations/",
-        OrganizerEventRegistrationListView.as_view(),
-        name="organizer-event-registration-list",
-    ),
-    path(
-        "organizer/events/<uuid:event_id>/registrations/<uuid:registration_id>/cohost/",
-        OrganizerRegistrationGrantCohostView.as_view(),
-        name="organizer-registration-grant-cohost",
+        "events/registrations/me/",
+        MyRegisteredEventListView.as_view(),
+        name="registered-event-me-list",
     ),
     path(
         "events/<uuid:event_id>/registrations/",
@@ -37,17 +27,11 @@ urlpatterns = [
         name="event-registration-me-cancel",
     ),
     path(
-        "events/<uuid:event_id>/registrations/<uuid:registration_id>/",
-        EventRegistrationDetailView.as_view(),
-        name="event-registration-detail",
+        "organizer/events/<uuid:event_id>/registrations/<uuid:registration_id>/cohost/",
+        OrganizerRegistrationGrantCohostView.as_view(),
+        name="organizer-registration-grant-cohost",
     ),
-    path(
-        "events/<uuid:event_id>/registrations/<uuid:registration_id>/cancel/",
-        OrganizerRegistrationCancelView.as_view(),
-        name="event-registration-cancel",
-    ),
-    path("tickets/me/", TicketListView.as_view(), name="ticket-me-list"),
-    path("tickets/<uuid:ticket_id>/", TicketDetailView.as_view(), name="ticket-detail"),
-    path("tickets/<uuid:ticket_id>/qr/", TicketQrAPIView.as_view(), name="ticket-qr"),
-    path("tickets/<uuid:ticket_id>/cancel/", TicketCancelView.as_view(), name="ticket-cancel"),
+    path("registrations/<uuid:registration_id>/ticket/", TicketDetailView.as_view(), name="ticket-detail"),
+    path("registrations/<uuid:registration_id>/ticket/token/", TicketQrAPIView.as_view(), name="ticket-token"),
+    path("registrations/<uuid:registration_id>/ticket/cancel/", TicketCancelView.as_view(), name="ticket-cancel"),
 ]

@@ -156,6 +156,7 @@ class TestOrganizerEventCRUD(APITestCase):
             {event["title"] for event in response.data["data"]},
             {"Owner Event", "Cohost Event", "Staff Event"},
         )
+        self.assertTrue(all(event["isOrganizer"] is True for event in response.data["data"]))
 
     def test_organizer_can_retrieve_event_detail(self):
         event = Event.objects.create(
@@ -509,9 +510,75 @@ class TestOrganizerEventCRUD(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["data"]["title"], "Public Detail Event")
         self.assertEqual(response.data["data"]["room"]["code"], "A1")
+        self.assertEqual(response.data["data"]["created_by"]["id"], str(self.organizer.id))
+        self.assertEqual(response.data["data"]["created_by"]["username"], self.organizer.username)
+        self.assertEqual(response.data["data"]["created_by"]["full_name"], "Organizer User")
         self.assertEqual(response.data["data"]["registration_fields"][0]["field_key"], "shirt_size")
+        self.assertEqual(response.data["data"]["user_event_relation"], "unregistered")
         self.assertNotIn("organizers", response.data["data"])
-        self.assertNotIn("created_by", response.data["data"])
+
+    def test_public_event_detail_returns_registered_user_relation(self):
+        attendee = User.objects.create_user(username="attendee", password="pass123")
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Registered Relation Event",
+            slug="registered-relation-event",
+            visibility=Event.Visibility.PUBLIC,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+        EventRegistration.objects.create(
+            event=event,
+            user=attendee,
+            status=EventRegistration.RegistrationStatus.REGISTERED,
+        )
+
+        self.client.force_authenticate(user=attendee)
+        response = self.client.get(f"/api/v1/events/{event.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["user_event_relation"], "registered")
+
+    def test_public_event_detail_returns_owner_user_relation(self):
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Owner Relation Event",
+            slug="owner-relation-event",
+            visibility=Event.Visibility.PUBLIC,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+
+        self.client.force_authenticate(user=self.organizer)
+        response = self.client.get(f"/api/v1/events/{event.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["user_event_relation"], "owner")
+
+    def test_public_event_detail_returns_cohost_user_relation(self):
+        cohost = User.objects.create_user(username="cohost", password="pass123")
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Cohost Relation Event",
+            slug="cohost-relation-event",
+            visibility=Event.Visibility.PUBLIC,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+        EventOrganizer.objects.create(
+            event=event,
+            user=cohost,
+            organizer_role=EventOrganizer.OrganizerRole.CO_HOST,
+        )
+
+        self.client.force_authenticate(user=cohost)
+        response = self.client.get(f"/api/v1/events/{event.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["user_event_relation"], "cohost")
 
     def test_public_event_detail_hides_private_or_unpublished_events(self):
         draft_event = Event.objects.create(
