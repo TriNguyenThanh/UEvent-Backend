@@ -53,7 +53,7 @@ class RoomListView(generics.ListAPIView):
             200: RoomListOutputSerializer(many=True),
             401: ApiErrorResponseSerializer(),
         },
-        tags=["Locations"],
+        tags=["Events"],
     )
     def get(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

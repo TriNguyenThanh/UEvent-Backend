@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 from apps.events.models import Event, EventCategory, EventOrganizer, RegistrationFormField
 from apps.locations.models import Room
+from apps.registrations.models import EventRegistration
 from apps.utils.s3 import S3Client
 from apps.users.models import User
 
@@ -135,6 +136,16 @@ class OrganizerEventListOutputSerializer(EventCoverImageUrlMixin, serializers.Mo
         ]
 
 
+class OrganizerEventListWithRoleOutputSerializer(OrganizerEventListOutputSerializer):
+    isOrganizer = serializers.SerializerMethodField()
+
+    class Meta(OrganizerEventListOutputSerializer.Meta):
+        fields = OrganizerEventListOutputSerializer.Meta.fields + ["isOrganizer"]
+
+    def get_isOrganizer(self, obj):
+        return True
+
+
 class PublicEventSearchOutputSerializer(OrganizerEventListOutputSerializer):
     class Meta(OrganizerEventListOutputSerializer.Meta):
         fields = OrganizerEventListOutputSerializer.Meta.fields + [
@@ -148,13 +159,17 @@ class PublicEventSearchOutputSerializer(OrganizerEventListOutputSerializer):
 
 class PublicEventDetailOutputSerializer(PublicEventSearchOutputSerializer):
     room = serializers.SerializerMethodField()
+    created_by = OrganizerEventUserSummarySerializer(read_only=True)
     registration_fields = OrganizerRegistrationFormFieldOutputSerializer(many=True, read_only=True)
+    user_event_relation = serializers.SerializerMethodField()
 
     class Meta(PublicEventSearchOutputSerializer.Meta):
         fields = PublicEventSearchOutputSerializer.Meta.fields + [
             "room",
+            "created_by",
             "registration_fields",
             "cancellation_deadline_at",
+            "user_event_relation",
         ]
 
     def get_room(self, obj):
@@ -171,6 +186,43 @@ class PublicEventDetailOutputSerializer(PublicEventSearchOutputSerializer):
             "building_name": getattr(building, "name", ""),
             "campus_name": getattr(campus, "name", ""),
         }
+
+    def get_user_event_relation(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return "unregistered"
+
+        if obj.created_by_id == user.id:
+            return "owner"
+
+        if EventOrganizer.objects.filter(
+            event=obj,
+            user=user,
+            organizer_role=EventOrganizer.OrganizerRole.OWNER,
+        ).exists():
+            return "owner"
+
+        if EventOrganizer.objects.filter(
+            event=obj,
+            user=user,
+            organizer_role=EventOrganizer.OrganizerRole.CO_HOST,
+        ).exists():
+            return "cohost"
+
+        is_registered = EventRegistration.objects.filter(
+            event=obj,
+            user=user,
+        ).exclude(
+            status__in=[
+                EventRegistration.RegistrationStatus.CANCELLED,
+                EventRegistration.RegistrationStatus.REJECTED,
+            ],
+        ).exists()
+        if is_registered:
+            return "registered"
+
+        return "unregistered"
 
 
 class PublicEventSearchQuerySerializer(serializers.Serializer):
@@ -269,7 +321,7 @@ class OrganizerEventInputSerializer(serializers.Serializer):
         required=False, allow_blank=True, allow_null=True, default=None
     )
     status = serializers.ChoiceField(
-        choices=[Event.Status.DRAFT, Event.Status.CANCELLED],
+        choices=[Event.Status.DRAFT, Event.Status.ACTIVE],
         required=False,
         default=Event.Status.DRAFT,
     )

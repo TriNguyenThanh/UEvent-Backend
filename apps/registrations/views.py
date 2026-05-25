@@ -13,12 +13,15 @@ from apps.registrations.serializers import (
     EventRoleSerializer,
     RegistrationCancelSerializer,
     RegistrationCreateSerializer,
+    RegistrationEventSerializer,
     RegistrationListSerializer,
     RegistrationQrSerializer,
     TicketDetailSerializer,
+    TicketUpdateSerializer,
 )
 from apps.registrations.services import (
     cancel_event_registration,
+    create_ticket_for_registration,
     create_event_registration,
     grant_cohost_role_to_registration,
     issue_registration_qr,
@@ -70,6 +73,32 @@ class MyRegistrationListView(generics.ListAPIView):
             EventRegistration.objects.filter(user=self.request.user)
             .select_related("event", "user", "ticket")
             .order_by("-registered_at", "-created_at")
+        )
+
+
+class MyRegisteredEventListView(generics.ListAPIView):
+    """
+    GET /api/v1/events/registrations/me/
+
+    Lists events registered by the current user.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = RegistrationEventSerializer
+
+    @swagger_auto_schema(
+        operation_summary="List My Registered Events",
+        operation_description="Lấy danh sách sự kiện mà người dùng hiện tại đã đăng ký.",
+        responses={200: RegistrationEventSerializer(many=True), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Registrations"],
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):  # type: ignore[override]
+        return (
+            Event.objects.filter(registrations__user=self.request.user)
+            .distinct()
+            .order_by("-registrations__registered_at", "-registrations__created_at")
         )
 
 
@@ -210,6 +239,20 @@ class MyEventRegistrationCancelView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
+        operation_summary="Get My Event Registration",
+        operation_description="User xem thông tin đăng ký của bản thân trong một sự kiện.",
+        responses={200: RegistrationListSerializer(), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Registrations"],
+    )
+    def get(self, request, event_id):
+        registration = get_object_or_404(
+            EventRegistration.objects.select_related("event", "user", "ticket"),
+            event_id=event_id,
+            user=request.user,
+        )
+        return Response(RegistrationListSerializer(registration).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
         operation_summary="Cancel My Event Registration",
         operation_description="User hủy đăng ký của bản thân trong một sự kiện.",
         responses={200: RegistrationListSerializer(), **REGISTRATION_ERROR_RESPONSES},
@@ -281,7 +324,8 @@ class TicketListView(generics.ListAPIView):
 class TicketDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TicketDetailSerializer
-    lookup_url_kwarg = "ticket_id"
+    lookup_field = "registration_id"
+    lookup_url_kwarg = "registration_id"
 
     def get_queryset(self):  # type: ignore[override]
         return Ticket.objects.select_related("registration", "registration__event", "registration__user")
@@ -297,12 +341,44 @@ class TicketDetailView(generics.RetrieveAPIView):
 
     @swagger_auto_schema(
         operation_summary="Get Ticket Detail",
-        operation_description="User hoặc organizer xem chi tiết vé.",
+        operation_description="User hoặc organizer xem chi tiết vé theo registration id.",
         responses={200: TicketDetailSerializer(), **REGISTRATION_ERROR_RESPONSES},
         tags=["Tickets"],
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary="Create Ticket",
+        operation_description="Organizer tạo vé cho một registration đã được đăng ký.",
+        responses={201: TicketDetailSerializer(), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Tickets"],
+    )
+    def post(self, request, registration_id):
+        registration = get_object_or_404(
+            EventRegistration.objects.select_related("event", "user"),
+            id=registration_id,
+        )
+        assert_event_organizer(request.user, registration.event)
+        ticket = create_ticket_for_registration(registration=registration)
+        return Response(TicketDetailSerializer(ticket).data, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(
+        operation_summary="Update Ticket",
+        operation_description="Organizer cập nhật trạng thái hoặc hạn sử dụng của vé theo registration id.",
+        request_body=TicketUpdateSerializer,
+        responses={200: TicketDetailSerializer(), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Tickets"],
+    )
+    def patch(self, request, *args, **kwargs):
+        ticket = self.get_object()
+        if not is_event_organizer(request.user, ticket.registration.event):
+            raise PermissionDenied("Only event organizers can update this ticket.")
+
+        serializer = TicketUpdateSerializer(ticket, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(TicketDetailSerializer(ticket).data, status=status.HTTP_200_OK)
 
 
 class TicketQrAPIView(APIView):
@@ -310,14 +386,14 @@ class TicketQrAPIView(APIView):
 
     @swagger_auto_schema(
         operation_summary="Get Ticket QR",
-        operation_description="Lấy QR payload tạm thời từ ticket id.",
+        operation_description="Lấy QR payload tạm thời từ registration id.",
         responses={200: RegistrationQrSerializer(), **REGISTRATION_ERROR_RESPONSES},
         tags=["Tickets"],
     )
-    def get(self, request, ticket_id):
+    def get(self, request, registration_id):
         ticket = get_object_or_404(
             Ticket.objects.select_related("registration", "registration__event", "registration__user"),
-            id=ticket_id,
+            registration_id=registration_id,
         )
         if ticket.registration.user_id != request.user.id and not is_event_organizer(
             request.user,
@@ -340,10 +416,10 @@ class TicketCancelView(APIView):
         responses={200: RegistrationListSerializer(), **REGISTRATION_ERROR_RESPONSES},
         tags=["Tickets"],
     )
-    def patch(self, request, ticket_id):
+    def patch(self, request, registration_id):
         ticket = get_object_or_404(
             Ticket.objects.select_related("registration", "registration__event", "registration__user"),
-            id=ticket_id,
+            registration_id=registration_id,
         )
         if ticket.registration.user_id != request.user.id and not is_event_organizer(
             request.user,
