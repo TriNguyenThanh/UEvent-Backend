@@ -327,11 +327,13 @@ def process_checkin_scan(
                     ticket = _resolve_ticket_from_payload(qr_payload, now)
                 except Ticket.DoesNotExist:
                     ticket = None
-        # elif ticket_code:
-        #     try:
-        #         ticket = Ticket.lock_for_checkin(ticket_code)
-        #     except Ticket.DoesNotExist:
-        #         ticket = None
+        elif ticket_code:
+            normalized_code = ticket_code.strip()
+            if normalized_code:
+                try:
+                    ticket = Ticket.lock_for_checkin(normalized_code)
+                except Ticket.DoesNotExist:
+                    ticket = None
         elif email:
             try:
                 ticket = _resolve_ticket_from_email(event_id=event.id, email=email)

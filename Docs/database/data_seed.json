@@ -319,10 +319,10 @@
       "created_at": "2026-04-17T08:32:00Z",
       "updated_at": "2026-04-17T08:32:00Z",
       "deleted_at": null,
-      "name": "Chuyên mục UTC2 002",
+      "name": "Âm nhạc",
       "slug": "utc2-category-002",
-      "description": "Nhóm sự kiện học thuật UTC2",
-      "icon": "school",
+      "description": "Nhóm sự kiện âm nhạc UTC2",
+      "icon": "music",
       "color": "#1E88E5",
       "is_active": true
     }
@@ -334,10 +334,25 @@
       "created_at": "2026-04-17T08:33:00Z",
       "updated_at": "2026-04-17T08:33:00Z",
       "deleted_at": null,
-      "name": "Chuyên mục UTC2 003",
+      "name": "Học thuật",
       "slug": "utc2-category-003",
-      "description": "Nhóm sự kiện âm nhạc và nghệ thuật UTC2",
-      "icon": "school",
+      "description": "Nhóm sự kiện học thuật UTC2",
+      "icon": "book",
+      "color": "#1E88E5",
+      "is_active": true
+    }
+  },
+  {
+    "model": "events.eventcategory",
+    "pk": "550959b4-cf3f-4d69-80bf-cc298dba7755",
+    "fields": {
+      "created_at": "2026-04-17T08:33:00Z",
+      "updated_at": "2026-04-17T08:33:00Z",
+      "deleted_at": null,
+      "name": "Thể thao",
+      "slug": "utc2-category-004",
+      "description": "Nhóm sự kiện thể thao UTC2",
+      "icon": "sports",
       "color": "#1E88E5",
       "is_active": true
     }
@@ -382,6 +397,19 @@
     }
   },
   {
+    "model": "locations.building",
+    "pk": "77777777-7777-4777-8777-777777777755",
+    "fields": {
+      "created_at": "2026-04-17T08:30:00Z",
+      "updated_at": "2026-04-17T08:30:00Z",
+      "deleted_at": null,
+      "campus": "66666666-6666-4666-8666-666666666666",
+      "name": "Sân bóng đá",
+      "code": "SVD",
+      "is_active": true
+    }
+  },
+  {
     "model": "locations.room",
     "pk": "88888888-8888-4888-8888-888888888888",
     "fields": {
@@ -390,7 +418,21 @@
       "deleted_at": null,
       "building": "77777777-7777-4777-8777-777777777777",
       "name": "Hội trường C1",
-      "code": "101",
+      "code": "C1",
+      "capacity": 120,
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.room",
+    "pk": "88888888-8888-4888-8888-888888888887",
+    "fields": {
+      "created_at": "2026-04-17T08:35:00Z",
+      "updated_at": "2026-04-17T08:35:00Z",
+      "deleted_at": null,
+      "building": "77777777-7777-4777-8777-777777777755",
+      "name": "Sân bóng đá",
+      "code": "SVD",
       "capacity": 120,
       "is_active": true
     }
@@ -475,7 +517,7 @@
       "end_at": "2026-06-01T04:00:00Z",
       "max_capacity": 80,
       "location_snapshot": "UTC2 - Hội trường C1, 450-451 Lê Văn Việt, TP. Thủ Đức",
-      "cover_image_key": "events/38a7b056-9072-4657-b55e-787f9c7c78ef/covers/f1b694d523de4ec4bed3adf2c356a946-5967d457-dd69-4ee0-ad1e-86373078a665.jpg",
+      "cover_image_key": "events/65943bed-44b9-47ea-b4df-76cd296fc55e/covers/72052c6cfa9143d19828650dfb497e3b-ec4ec6fe-7298-4871-a8f9-28bd17f47bd6.jpg",
       "deep_link": "uevent://events/talkshow-global-thinking-future-journey-2026"
     }
   },
@@ -487,11 +529,11 @@
       "updated_at": "2026-04-17T09:42:00Z",
       "deleted_at": null,
       "category": "31269c8a-bb15-4334-92bc-c154addf1494",
-      "room": "88888888-8888-4888-8888-888888888888",
+      "room": "88888888-8888-4888-8888-888888888887",
       "created_by": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
-      "title": "Sự kiện học thuật UTC2 002",
+      "title": "Sự kiện âm nhạc UTC2 002",
       "slug": "utc2-su-kien-002-2026",
-      "description": "Hoạt động học thuật UTC2 số 002, tập trung đổi mới sáng tạo và công nghệ.",
+      "description": "Hoạt động âm nhạc, tập trung đổi mới sáng tạo và công nghệ.",
       "visibility": "public",
       "status": "approved",
       "registration_open_at": "2026-05-20T00:00:00Z",
@@ -500,8 +542,8 @@
       "start_at": "2026-06-08T08:00:00Z",
       "end_at": "2026-06-08T10:00:00Z",
       "max_capacity": 120,
-      "location_snapshot": "UTC2 - Hội trường/Cụm phòng số 002, TP. Thủ Đức",
-      "cover_image_key": "events/38a7b056-9072-4657-b55e-787f9c7c78ef/covers/f1b694d523de4ec4bed3adf2c356a946-5967d457-dd69-4ee0-ad1e-86373078a665.jpg",
+      "location_snapshot": "UTC2 - Sân bóng đá, TP. Thủ Đức",
+      "cover_image_key": "events/65943bed-44b9-47ea-b4df-76cd296fc55e/covers/72052c6cfa9143d19828650dfb497e3b-ec4ec6fe-7298-4871-a8f9-28bd17f47bd6.jpg",
       "deep_link": "uevent://events/utc2-su-kien-002-2026"
     }
   },
@@ -513,11 +555,11 @@
       "updated_at": "2026-04-17T09:43:00Z",
       "deleted_at": null,
       "category": "550959b4-cf3f-4d69-80bf-cc298dba5882",
-      "room": "88888888-8888-4888-8888-888888888888",
+      "room": "88888888-8888-4888-8888-888888888889",
       "created_by": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
-      "title": "Sự kiện học thuật UTC2 003",
+      "title": "Sự kiện âm nhạc UTC2 003",
       "slug": "utc2-su-kien-003-2026",
-      "description": "Hoạt động học thuật UTC2 số 003, tập trung đổi mới sáng tạo và công nghệ.",
+      "description": "Hoạt động âm nhạc, tập trung đổi mới sáng tạo và công nghệ.",
       "visibility": "public",
       "status": "draft",
       "registration_open_at": "2026-05-20T00:00:00Z",
@@ -527,7 +569,7 @@
       "end_at": "2026-06-15T11:00:00Z",
       "max_capacity": 60,
       "location_snapshot": "UTC2 - Hội trường/Cụm phòng số 003, TP. Thủ Đức",
-      "cover_image_key": "events/38a7b056-9072-4657-b55e-787f9c7c78ef/covers/f1b694d523de4ec4bed3adf2c356a946-5967d457-dd69-4ee0-ad1e-86373078a665.jpg",
+      "cover_image_key": "events/65943bed-44b9-47ea-b4df-76cd296fc55e/covers/72052c6cfa9143d19828650dfb497e3b-ec4ec6fe-7298-4871-a8f9-28bd17f47bd6.jpg",
       "deep_link": "uevent://events/utc2-su-kien-003-2026"
     }
   },
