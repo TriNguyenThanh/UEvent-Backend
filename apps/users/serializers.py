@@ -44,7 +44,30 @@ class UpdateProfileInputSerializer(serializers.Serializer):
     """Input serializer for PATCH /auth/profile."""
 
     full_name = serializers.CharField(max_length=255, required=False)
-    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    student_code = serializers.CharField(max_length=32, required=False, allow_blank=True, allow_null=True)
-    faculty = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
-    class_name = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
+    phone_number = serializers.CharField(
+        max_length=20, required=False, allow_blank=True
+    )
+    student_code = serializers.CharField(
+        max_length=32, required=False, allow_blank=True, allow_null=True
+    )
+    faculty = serializers.CharField(
+        max_length=200, required=False, allow_blank=True, allow_null=True
+    )
+    class_name = serializers.CharField(
+        max_length=100, required=False, allow_blank=True, allow_null=True
+    )
+
+
+class ChangeEmailNewOtpInputSerializer(serializers.Serializer):
+    """Input serializer for POST /auth/profile/email/new/otp/."""
+
+    new_email = serializers.EmailField()
+    current_otp_code = serializers.CharField(min_length=6, max_length=6)
+
+
+class ChangeEmailInputSerializer(serializers.Serializer):
+    """Input serializer for PATCH /auth/profile/email/."""
+
+    new_email = serializers.EmailField()
+    current_otp_code = serializers.CharField(min_length=6, max_length=6)
+    new_email_otp_code = serializers.CharField(min_length=6, max_length=6)
