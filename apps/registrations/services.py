@@ -193,7 +193,12 @@ def cancel_event_registration(*, registration: EventRegistration, reason: str | 
         EventRegistration.RegistrationStatus.REJECTED,
     }:
         raise ValidationError({"registration": "Registration is already cancelled."})
-
+    
+    if registration.status in {
+        EventRegistration.RegistrationStatus.CHECKED_IN,
+    }:
+        raise ValidationError({"registration": "Registration is already checked in."})
+    
     registration.status = EventRegistration.RegistrationStatus.CANCELLED
     registration.cancelled_at = timezone.now()
     registration.cancel_reason = reason or None
