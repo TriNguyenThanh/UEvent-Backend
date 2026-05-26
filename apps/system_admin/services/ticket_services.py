@@ -223,6 +223,7 @@ class AdminTicketService:
         actor,
         event_id,
         ticket_code: str | None = None,
+        email: str | None = None,
         qr_payload: str | None = None,
         qr_signature: str | None = None,
         note: str | None = None,
@@ -231,6 +232,7 @@ class AdminTicketService:
             result = process_checkin_scan(
                 event_id=event_id,
                 ticket_code=ticket_code,
+                email=email,
                 qr_payload=qr_payload,
                 qr_signature=qr_signature,
                 scanner_user=actor,
@@ -254,6 +256,7 @@ class AdminTicketService:
                 "result": result["result"],
                 "checkin_log_id": str(log.pk),
                 "ticket_code": getattr(ticket, "ticket_code", ticket_code or ""),
+                "email": email or "",
             },
         )
         return result
