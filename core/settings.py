@@ -14,6 +14,7 @@ LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 SECRET_KEY = env("SECRET_KEY")
+TICKET_QR_SECRET = env("TICKET_QR_SECRET", default=SECRET_KEY)
 DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])

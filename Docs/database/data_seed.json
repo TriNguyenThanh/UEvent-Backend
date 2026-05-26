@@ -670,7 +670,7 @@
       "deleted_at": null,
       "event": "12121212-1212-4121-8121-121212121212",
       "user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
-      "status": "registered",
+      "status": "checked_in",
       "form_answers_jsonb": {
         "student_id": "SV000002"
       },
@@ -727,11 +727,11 @@
       "deleted_at": null,
       "registration": "19191919-1919-4191-8191-191919191919",
       "ticket_code": "DEMO-TICKET-001",
-      "qr_payload": "uevent:ticket:TCK-2026-0001",
+      "qr_payload": "TICKET:DEMO-TICKET-001",
       "qr_signature": "seed-signature-0001",
-      "status": "valid",
+      "status": "used",
       "issued_at": "2026-05-17T08:00:00Z",
-      "used_at": null,
+      "used_at": "2026-06-01T01:10:00Z",
       "expires_at": "2026-06-01T04:00:00Z"
     }
   },
@@ -744,40 +744,12 @@
       "deleted_at": null,
       "registration": "9e18810f-1f22-41ad-98a6-1349175d567f",
       "ticket_code": "DEMO-TICKET-002",
-      "qr_payload": "uevent:ticket:TCK-2026-0002",
+      "qr_payload": "TICKET:DEMO-TICKET-002",
       "qr_signature": "seed-signature-0002",
       "status": "valid",
       "issued_at": "2026-05-17T08:00:00Z",
       "used_at": null,
       "expires_at": "2026-06-08T10:00:00Z"
-    }
-  },
-  {
-    "model": "registrations.ticketqrtoken",
-    "pk": "1b1b1b1b-1b1b-41b1-81b1-1b1b1b1b1b1b",
-    "fields": {
-      "created_at": "2026-04-17T09:04:00Z",
-      "updated_at": "2026-04-17T09:04:00Z",
-      "deleted_at": null,
-      "ticket": "1a1a1a1a-1a1a-41a1-81a1-1a1a1a1a1a1a",
-      "token_hash": "seed-token-hash-0001",
-      "issued_at": "2026-05-17T08:00:00Z",
-      "valid_from": "2026-05-17T08:00:00Z",
-      "valid_to": "2026-06-30T00:00:00Z"
-    }
-  },
-  {
-    "model": "registrations.ticketqrtoken",
-    "pk": "4aae2ced-e42d-4f77-adab-b56585382382",
-    "fields": {
-      "created_at": "2026-04-17T10:52:00Z",
-      "updated_at": "2026-04-17T10:52:00Z",
-      "deleted_at": null,
-      "ticket": "4220f716-6709-48c3-a202-94e70507fbb9",
-      "token_hash": "seed-token-hash-0002",
-      "issued_at": "2026-05-17T08:00:00Z",
-      "valid_from": "2026-05-17T08:00:00Z",
-      "valid_to": "2026-06-30T00:00:00Z"
     }
   },
   {
@@ -871,7 +843,7 @@
       "event": "12121212-1212-4121-8121-121212121212",
       "ticket": "1a1a1a1a-1a1a-41a1-81a1-1a1a1a1a1a1a",
       "scanner_user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
-      "checked_in_at": "2026-04-12T01:10:00Z",
+      "checked_in_at": "2026-06-01T01:10:00Z",
       "result": "success",
       "note": "Check-in thành công tại Hội trường C1 - UTC2"
     }

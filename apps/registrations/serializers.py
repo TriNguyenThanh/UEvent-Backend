@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.events.serializers import EventCoverImageUrlMixin
 from apps.events.models import EventOrganizer
-from apps.registrations.models import EventRegistration
+from apps.registrations.models import CheckinLog, EventRegistration
 from apps.registrations.models import Ticket
 
 
@@ -108,6 +108,19 @@ class RegistrationQrSerializer(serializers.Serializer):
     valid_to = serializers.DateTimeField(read_only=True)
 
 
+class EventCheckinScanInputSerializer(serializers.Serializer):
+    ticket_code = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    qr_payload = serializers.CharField(required=False, allow_blank=True)
+    qr_signature = serializers.CharField(required=False, allow_blank=True)
+    note = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)
+
+    def validate(self, attrs):
+        if not attrs.get("ticket_code") and not attrs.get("email") and not attrs.get("qr_payload"):
+            raise serializers.ValidationError({"ticket": "Cần nhập email, mã vé hoặc QR payload."})
+        return attrs
+
+
 class TicketUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
@@ -137,3 +150,63 @@ class TicketDetailSerializer(serializers.ModelSerializer):
 
     def get_event(self, obj):
         return RegistrationEventSerializer(obj.registration.event).data
+
+
+class EventCheckinTicketSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+    registration_id = serializers.UUIDField(source="registration.id", read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = [
+            "id",
+            "registration_id",
+            "ticket_code",
+            "status",
+            "issued_at",
+            "used_at",
+            "expires_at",
+        ]
+        read_only_fields = fields
+
+
+class EventCheckinLogSerializer(serializers.ModelSerializer):
+    scanner_user = serializers.SerializerMethodField()
+    ticket = serializers.SerializerMethodField()
+    registration = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CheckinLog
+        fields = [
+            "id",
+            "result",
+            "note",
+            "checked_in_at",
+            "scanner_user",
+            "ticket",
+            "registration",
+        ]
+        read_only_fields = fields
+
+    def get_scanner_user(self, obj):
+        if obj.scanner_user is None:
+            return None
+        return RegistrationUserSummarySerializer(obj.scanner_user).data
+
+    def get_ticket(self, obj):
+        if obj.ticket is None:
+            return None
+        return EventCheckinTicketSerializer(obj.ticket).data
+
+    def get_registration(self, obj):
+        if obj.ticket is None:
+            return None
+        return RegistrationListSerializer(obj.ticket.registration).data
+
+
+class EventCheckinScanResultSerializer(serializers.Serializer):
+    result = serializers.CharField()
+    log = EventCheckinLogSerializer()
+    ticket = EventCheckinTicketSerializer(allow_null=True)
+    registration = RegistrationListSerializer(allow_null=True)
+    event = RegistrationEventSerializer()
