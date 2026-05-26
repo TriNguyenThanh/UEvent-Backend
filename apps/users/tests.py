@@ -460,6 +460,116 @@ class OtpVerifyViewTests(TestCase):
         self.assertIsNone(cache.get(otp_service._key_code(self.email)))
 
 
+class UserProfileEmailChangeViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.User = get_user_model()
+        self.user = self.User.objects.create_user(
+            username="old@example.com",
+            email="old@example.com",
+        )
+        UserAuthIdentity.objects.create(
+            user=self.user,
+            provider=UserAuthIdentity.Provider.KEYCLOAK,
+            provider_subject="keycloak-user-id",
+            email_verified=True,
+        )
+        self.client.force_authenticate(
+            user=self.user, token={"sub": "keycloak-user-id"}
+        )
+        self.current_email = "old@example.com"
+        self.new_email = "new@example.com"
+        cache.delete(otp_service._key_code(self.current_email))
+        cache.delete(otp_service._key_attempts(self.current_email))
+        cache.delete(otp_service._key_cooldown(self.current_email))
+        cache.delete(otp_service._key_code(self.new_email))
+        cache.delete(otp_service._key_attempts(self.new_email))
+        cache.delete(otp_service._key_cooldown(self.new_email))
+
+    def _seed_current_email_otp(self):
+        cache.set(otp_service._key_code(self.current_email), "123456", timeout=180)
+        cache.set(otp_service._key_attempts(self.current_email), 0, timeout=180)
+        cache.set(otp_service._key_cooldown(self.current_email), "1", timeout=60)
+
+    def _seed_new_email_otp(self):
+        cache.set(otp_service._key_code(self.new_email), "654321", timeout=180)
+        cache.set(otp_service._key_attempts(self.new_email), 0, timeout=180)
+        cache.set(otp_service._key_cooldown(self.new_email), "1", timeout=60)
+
+    @patch("apps.users.services.otp_service.send_otp")
+    def test_send_email_change_otp_uses_current_user_email(self, mock_send_otp):
+        response = self.client.post(reverse("users:user-profile-email-otp"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["email"], self.current_email)
+        mock_send_otp.assert_called_once_with(self.current_email)
+
+    @patch("apps.users.services.otp_service.send_otp")
+    def test_send_new_email_otp_requires_current_email_otp(self, mock_send_otp):
+        self._seed_current_email_otp()
+
+        response = self.client.post(
+            reverse("users:user-profile-new-email-otp"),
+            {"new_email": "New@Example.com", "current_otp_code": "123456"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["email"], self.new_email)
+        mock_send_otp.assert_called_once_with(self.new_email)
+        self.assertEqual(cache.get(otp_service._key_code(self.current_email)), "123456")
+
+    @patch("apps.users.services.update_keycloak_user_email")
+    def test_change_email_with_current_and_new_email_otp(
+        self, mock_update_keycloak_email
+    ):
+        self._seed_current_email_otp()
+        self._seed_new_email_otp()
+
+        response = self.client.patch(
+            reverse("users:user-profile-email-change"),
+            {
+                "new_email": "New@Example.com",
+                "current_otp_code": "123456",
+                "new_email_otp_code": "654321",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, self.new_email)
+        self.assertEqual(self.user.username, self.new_email)
+        self.assertEqual(response.data["data"]["email"], self.new_email)
+        self.assertIsNone(cache.get(otp_service._key_code(self.current_email)))
+        self.assertIsNone(cache.get(otp_service._key_code(self.new_email)))
+        mock_update_keycloak_email.assert_called_once_with(
+            "keycloak-user-id",
+            self.new_email,
+        )
+
+    def test_change_email_rejects_duplicate_email(self):
+        self.User.objects.create_user(
+            username=self.new_email,
+            email=self.new_email,
+        )
+        self._seed_current_email_otp()
+
+        response = self.client.patch(
+            reverse("users:user-profile-email-change"),
+            {
+                "new_email": self.new_email,
+                "current_otp_code": "123456",
+                "new_email_otp_code": "654321",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, self.current_email)
+
+
 @override_settings(GOOGLE_OAUTH_CLIENT_IDS=["google-web-client-id"])
 class GoogleVerifyViewTests(TestCase):
     def setUp(self):

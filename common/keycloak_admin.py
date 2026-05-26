@@ -167,6 +167,31 @@ def get_or_create_keycloak_user(
     return keycloak_user_id
 
 
+def update_keycloak_user_email(keycloak_user_id: str, email: str) -> None:
+    """Cập nhật email/username của user Keycloak sau khi OTP email cũ đã hợp lệ."""
+    email = email.strip().lower()
+    service_token = _get_service_account_token()
+    headers = _admin_headers(service_token)
+    base_url = settings.KEYCLOAK_ADMIN_API_URL
+
+    response = requests.put(
+        f"{base_url}/users/{keycloak_user_id}",
+        json={
+            "email": email,
+            "username": email,
+            "emailVerified": True,
+            "enabled": True,
+        },
+        headers=headers,
+        timeout=10,
+    )
+    if response.status_code not in (200, 204):
+        raise KeycloakAdminError(
+            f"Không thể cập nhật email user trong Keycloak: {response.text}",
+            status_code=response.status_code,
+        )
+
+
 def exchange_token_for_user(keycloak_user_id: str) -> Dict[str, Any]:
     """
     Dùng Token Exchange (RFC 8693 / Keycloak impersonation) để mint

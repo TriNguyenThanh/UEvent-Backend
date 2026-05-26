@@ -3,9 +3,11 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, ValidationError
 
 from apps.users.models import Role, UserAuthIdentity, UserRole
+from common import otp as otp_service
+from common.keycloak_admin import update_keycloak_user_email
 
 
 class UserService:
@@ -16,7 +18,13 @@ class UserService:
         """Update user profile fields from validated PATCH data."""
         update_fields = []
 
-        for field_name in ("full_name", "phone_number", "student_code", "faculty", "class_name"):
+        for field_name in (
+            "full_name",
+            "phone_number",
+            "student_code",
+            "faculty",
+            "class_name",
+        ):
             if field_name in validated_data:
                 setattr(user, field_name, validated_data[field_name])
                 update_fields.append(field_name)
@@ -26,6 +34,161 @@ class UserService:
                 user.save(update_fields=update_fields)
 
         return user
+
+    @staticmethod
+    def send_email_change_otp(user) -> str:
+        """Send an OTP to the user's current email before changing email."""
+        current_email = KeycloakProvisioningService.normalize_email(user.email or "")
+        if not current_email:
+            raise ValidationError(
+                {"email": "Tài khoản chưa có email hiện tại để xác nhận."}
+            )
+
+        otp_service.send_otp(current_email)
+        return current_email
+
+    @staticmethod
+    def send_new_email_change_otp(
+        user, *, new_email: str, current_otp_code: str
+    ) -> str:
+        """Verify the current-email OTP, then send an OTP to the requested new email."""
+        User = get_user_model()
+        current_email = KeycloakProvisioningService.normalize_email(user.email or "")
+        normalized_email = KeycloakProvisioningService.normalize_email(new_email)
+
+        UserService._validate_email_change_request(
+            User=User,
+            user=user,
+            current_email=current_email,
+            normalized_email=normalized_email,
+        )
+        UserService._verify_email_otp(
+            email=current_email,
+            otp_code=current_otp_code,
+            consume=False,
+            field_name="current_otp_code",
+        )
+
+        otp_service.send_otp(normalized_email)
+        return normalized_email
+
+    @staticmethod
+    def change_email_with_otp(
+        user,
+        *,
+        new_email: str,
+        current_otp_code: str,
+        new_email_otp_code: str,
+        keycloak_subject: str = "",
+    ):
+        """Change user email after validating OTPs for current and new email."""
+        User = get_user_model()
+        current_email = KeycloakProvisioningService.normalize_email(user.email or "")
+        normalized_email = KeycloakProvisioningService.normalize_email(new_email)
+
+        UserService._validate_email_change_request(
+            User=User,
+            user=user,
+            current_email=current_email,
+            normalized_email=normalized_email,
+        )
+
+        with transaction.atomic():
+            locked_user = User.objects.select_for_update().get(pk=user.pk)
+            current_email = KeycloakProvisioningService.normalize_email(
+                locked_user.email or ""
+            )
+            UserService._validate_email_change_request(
+                User=User,
+                user=locked_user,
+                current_email=current_email,
+                normalized_email=normalized_email,
+            )
+            UserService._verify_email_otp(
+                email=current_email,
+                otp_code=current_otp_code,
+                consume=False,
+                field_name="current_otp_code",
+            )
+            UserService._verify_email_otp(
+                email=normalized_email,
+                otp_code=new_email_otp_code,
+                consume=False,
+                field_name="new_email_otp_code",
+            )
+
+            identity = UserAuthIdentity.objects.select_for_update().filter(
+                user=locked_user,
+                provider=UserAuthIdentity.Provider.KEYCLOAK,
+            )
+            if keycloak_subject:
+                identity = identity.filter(provider_subject=keycloak_subject)
+            identity = identity.first()
+            if identity is None:
+                raise ValidationError(
+                    {
+                        "email": (
+                            "Không tìm thấy danh tính đăng nhập để đồng bộ email. "
+                            "Vui lòng đăng nhập lại và thử lại."
+                        )
+                    }
+                )
+            update_keycloak_user_email(identity.provider_subject, normalized_email)
+
+            locked_user.email = normalized_email
+            locked_user.username = normalized_email
+            locked_user.save(update_fields=["email", "username", "updated_at"])
+            otp_service.consume_otp(current_email)
+            otp_service.consume_otp(normalized_email)
+
+        return locked_user
+
+    @staticmethod
+    def _validate_email_change_request(
+        *, User, user, current_email: str, normalized_email: str
+    ) -> None:
+        if not current_email:
+            raise ValidationError(
+                {"email": "Tài khoản chưa có email hiện tại để xác nhận."}
+            )
+        if normalized_email == current_email:
+            raise ValidationError({"new_email": "Email mới phải khác email hiện tại."})
+
+        if (
+            User.objects.filter(email__iexact=normalized_email)
+            .exclude(pk=user.pk)
+            .exists()
+        ):
+            raise ValidationError(
+                {"new_email": "Email này đã được sử dụng bởi tài khoản khác."}
+            )
+
+        username_conflict = (
+            User.objects.filter(username__iexact=normalized_email)
+            .exclude(pk=user.pk)
+            .exists()
+        )
+        if username_conflict:
+            raise ValidationError(
+                {"new_email": "Email này đã được sử dụng bởi tài khoản khác."}
+            )
+
+    @staticmethod
+    def _verify_email_otp(
+        *,
+        email: str,
+        otp_code: str,
+        consume: bool,
+        field_name: str,
+    ) -> None:
+        try:
+            otp_service.verify_otp(email, otp_code, consume=consume)
+        except otp_service.OtpExpiredError as exc:
+            raise ValidationError({field_name: str(exc)}) from exc
+        except otp_service.OtpInvalidError as exc:
+            raise ValidationError({field_name: str(exc)}) from exc
+        except otp_service.OtpMaxAttemptsError as exc:
+            raise ValidationError({field_name: str(exc)}) from exc
 
 
 class KeycloakProvisioningService:
@@ -102,9 +265,15 @@ class KeycloakProvisioningService:
         try:
             role = Role.objects.get(code=cls.DEFAULT_ROLE_CODE, is_active=True)
         except Role.DoesNotExist as exc:
-            raise AuthenticationFailed("Default student role is not configured.") from exc
+            raise AuthenticationFailed(
+                "Default student role is not configured."
+            ) from exc
 
-        existing = UserRole.all_objects.select_for_update().filter(user=user, role=role).first()
+        existing = (
+            UserRole.all_objects.select_for_update()
+            .filter(user=user, role=role)
+            .first()
+        )
         if existing is not None:
             existing.deleted_at = None
             existing.is_primary = True
@@ -268,10 +437,14 @@ class KeycloakProvisioningService:
         if user is not None:
             qs = qs.exclude(pk=user.pk)
         if qs.exists():
-            raise AuthenticationFailed("A local user already uses this email as username.")
+            raise AuthenticationFailed(
+                "A local user already uses this email as username."
+            )
 
     @classmethod
-    def _sync_user_profile(cls, *, User, user, email: str, full_name: str, avatar_url: str) -> None:
+    def _sync_user_profile(
+        cls, *, User, user, email: str, full_name: str, avatar_url: str
+    ) -> None:
         cls._ensure_username_available(User=User, email=email, user=user)
 
         update_fields = []
@@ -296,4 +469,11 @@ class KeycloakProvisioningService:
         identity.deleted_at = None
         identity.email_verified = True
         identity.last_login_at = timezone.now()
-        identity.save(update_fields=["deleted_at", "email_verified", "last_login_at", "updated_at"])
+        identity.save(
+            update_fields=[
+                "deleted_at",
+                "email_verified",
+                "last_login_at",
+                "updated_at",
+            ]
+        )
