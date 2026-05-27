@@ -101,6 +101,35 @@ The project follows a **Hybrid (Feature-first) Monolithic Architecture**. This a
 
     Access the API Docs at: `http://localhost:8000/api/v1/swagger/`
 
+### Push Notification Delivery
+
+#### Backend Environment Variables & Secrets
+Real push notification delivery uses Celery, Redis, and Firebase Cloud Messaging.
+
+Required production variables:
+
+```env
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/1
+FCM_ENABLED=true
+FCM_DRY_RUN=false
+FIREBASE_CREDENTIALS_PATH=/run/firebase-service-account.json
+FCM_BATCH_SIZE=500
+FCM_MAX_RETRIES=3
+FCM_DEVICE_TOKEN_TTL_DAYS=365
+```
+
+Required file secret:
+`UEvent-Backend\firebase-service-account.json`
+
+#### Frontend Mobile Environment Variables
+
+`UEvent-Frontend\mobile\lib\firebase_options.dart`
+`UEvent-Frontend\mobile\android\app\google-services.json`
+
+
+Do not commit Firebase service account JSON. Mount it as a Docker secret or inject `FIREBASE_CREDENTIALS_JSON` from the deployment secret store.
+
 -----
 
 ## Testing

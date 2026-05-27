@@ -1,0 +1,40 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="Page-1" id="fZAOuBn_7j34MvBCbk-X">
+    <mxGraphModel dx="1042" dy="640" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="boundary_admin" parent="1" style="shape=rect;html=1;verticalAlign=top;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;" value="Phân hệ Quản trị viên" vertex="1">
+          <mxGeometry height="260" width="300" x="150" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="a_admin" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Quản trị viên" vertex="1">
+          <mxGeometry height="60" width="30" x="40" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="a1" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Quản lý người dùng" vertex="1">
+          <mxGeometry height="40" width="140" x="220" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Duyệt sự kiện" vertex="1">
+          <mxGeometry height="40" width="140" x="220" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Xóa / khóa sự kiện" vertex="1">
+          <mxGeometry height="40" width="140" x="220" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="a4" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Xem báo cáo" vertex="1">
+          <mxGeometry height="40" width="140" x="220" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="e_a1" edge="1" parent="1" source="a_admin" style="endArrow=none;html=1;" target="a1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_a2" edge="1" parent="1" source="a_admin" style="endArrow=none;html=1;" target="a2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_a3" edge="1" parent="1" source="a_admin" style="endArrow=none;html=1;" target="a3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_a4" edge="1" parent="1" source="a_admin" style="endArrow=none;html=1;" target="a4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

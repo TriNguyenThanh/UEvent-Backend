@@ -1,0 +1,30 @@
+@startuml
+actor "Ban tổ chức" as Organizer
+participant "Mobile App" as App
+participant "Event Service" as Event
+participant "Notification Service" as Noti
+
+Organizer -> App : Nhập thông tin sự kiện
+App -> Event : createEvent(data)
+
+activate Event
+Event -> Event : validateData()
+
+alt Dữ liệu không hợp lệ
+    Event --> App : Trả về lỗi (Dữ liệu thiếu/sai định dạng)
+    App --> Organizer : Hiển thị thông báo: "Thông tin không hợp lệ"
+else Dữ liệu hợp lệ
+    Event -> Event : saveEvent()
+
+    alt Lỗi lưu trữ (Database Error)
+        Event --> App : Trả về lỗi (Không thể lưu dữ liệu)
+        App --> Organizer : Hiển thị thông báo: "Lỗi hệ thống, vui lòng thử lại"
+    else Lưu thành công
+        Event -> Noti : notifyFollowers()
+        Noti --> Organizer : Gửi thông báo tạo sự kiện thành công
+        Event --> App : Event Created
+        App --> Organizer : Hiển thị: "Sự kiện đã được tạo!"
+    end
+end
+deactivate Event
+@enduml

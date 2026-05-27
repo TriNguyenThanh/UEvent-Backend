@@ -1,0 +1,1057 @@
+[
+  {
+    "model": "users.role",
+    "pk": "11111111-1111-4111-8111-111111111111",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "code": "admin",
+      "name": "Admin",
+      "description": "Quyen quan tri he thong",
+      "is_active": true
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": "22222222-2222-4222-8222-222222222222",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "code": "organizer",
+      "name": "Organizer",
+      "description": "Ban to chuc su kien",
+      "is_active": true
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": "33333333-3333-4333-8333-333333333333",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "code": "student",
+      "name": "Student",
+      "description": "Sinh vien / Nguoi tham gia",
+      "is_active": true
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "c8b1380b-3734-48e5-a931-ae561d9a32fd",
+    "fields": {
+      "password": "",
+      "last_login": null,
+      "is_superuser": true,
+      "username": "sysadmin",
+      "first_name": "admin",
+      "last_name": "UTC2",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2026-05-17T08:00:00Z",
+      "email": "admin@utc2.edu.vn",
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "student_code": null,
+      "full_name": "admin UTC2",
+      "phone_number": "",
+      "avatar_url": "",
+      "account_status": "active",
+      "faculty": "UTC2",
+      "class_name": "ADMIN"
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+    "fields": {
+      "password": "",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "organizer",
+      "first_name": "organizer",
+      "last_name": "UTC2",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-05-17T08:00:00Z",
+      "email": "organizer@utc2.edu.vn",
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "student_code": null,
+      "full_name": "organizer UTC2",
+      "phone_number": "",
+      "avatar_url": "",
+      "account_status": "active",
+      "faculty": "Phong Cong tac Sinh vien",
+      "class_name": "ORGANIZER"
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+    "fields": {
+      "password": "",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "student01",
+      "first_name": "An",
+      "last_name": "Nguyen Van",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-05-17T08:00:00Z",
+      "email": "2251050001@st.utc2.edu.vn",
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "student_code": "2251050001",
+      "full_name": "An Nguyen Van",
+      "phone_number": "",
+      "avatar_url": "",
+      "account_status": "active",
+      "faculty": "Cong nghe Thong tin",
+      "class_name": "22DTHA1"
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+    "fields": {
+      "password": "",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "student02",
+      "first_name": "Binh",
+      "last_name": "Tran Thi",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-05-17T08:00:00Z",
+      "email": "2251050002@st.utc2.edu.vn",
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "student_code": "2251050002",
+      "full_name": "Binh Tran Thi",
+      "phone_number": "",
+      "avatar_url": "",
+      "account_status": "active",
+      "faculty": "Kinh te Van tai",
+      "class_name": "22DKTA1"
+    }
+  },
+  {
+    "model": "users.userauthidentity",
+    "pk": "0a0a0a0a-0a0a-40a0-80a0-0a0a0a0a0a01",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "user": "c8b1380b-3734-48e5-a931-ae561d9a32fd",
+      "provider": "keycloak",
+      "provider_subject": "sysadmin",
+      "email_verified": true,
+      "password_hash": null,
+      "last_login_at": null
+    }
+  },
+  {
+    "model": "users.userrole",
+    "pk": "13131313-1313-4131-8131-131313131313",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "user": "c8b1380b-3734-48e5-a931-ae561d9a32fd",
+      "role": "11111111-1111-4111-8111-111111111111",
+      "is_primary": true,
+      "assigned_at": "2026-05-17T08:00:00Z",
+      "assigned_by": null
+    }
+  },
+  {
+    "model": "users.userauthidentity",
+    "pk": "0b0b0b0b-0b0b-40b0-80b0-0b0b0b0b0b02",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "provider": "keycloak",
+      "provider_subject": "organizer",
+      "email_verified": true,
+      "password_hash": null,
+      "last_login_at": null
+    }
+  },
+  {
+    "model": "users.userrole",
+    "pk": "14141414-1414-4141-8141-141414141414",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "role": "22222222-2222-4222-8222-222222222222",
+      "is_primary": true,
+      "assigned_at": "2026-05-17T08:00:00Z",
+      "assigned_by": "c8b1380b-3734-48e5-a931-ae561d9a32fd"
+    }
+  },
+  {
+    "model": "users.userauthidentity",
+    "pk": "8b2617c1-1ae5-457f-91da-1029480719df",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "provider": "keycloak",
+      "provider_subject": "student01",
+      "email_verified": true,
+      "password_hash": null,
+      "last_login_at": null
+    }
+  },
+  {
+    "model": "users.userrole",
+    "pk": "15151515-1515-4151-8151-151515151515",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "role": "33333333-3333-4333-8333-333333333333",
+      "is_primary": true,
+      "assigned_at": "2026-05-17T08:00:00Z",
+      "assigned_by": "c8b1380b-3734-48e5-a931-ae561d9a32fd"
+    }
+  },
+  {
+    "model": "users.userauthidentity",
+    "pk": "6975fa01-191c-40ef-959f-184253868dde",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "provider": "keycloak",
+      "provider_subject": "student02",
+      "email_verified": true,
+      "password_hash": null,
+      "last_login_at": null
+    }
+  },
+  {
+    "model": "users.userrole",
+    "pk": "4960a0cf-8f2e-430d-8149-e98f135ad366",
+    "fields": {
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "role": "33333333-3333-4333-8333-333333333333",
+      "is_primary": true,
+      "assigned_at": "2026-05-17T08:00:00Z",
+      "assigned_by": "c8b1380b-3734-48e5-a931-ae561d9a32fd"
+    }
+  },
+  {
+    "model": "app_settings.appsetting",
+    "pk": "44444444-4444-4444-8444-444444444444",
+    "fields": {
+      "created_at": "2026-04-17T08:15:00Z",
+      "updated_at": "2026-04-17T08:15:00Z",
+      "deleted_at": null,
+      "key": "registration.default_cancellation_hours",
+      "value": "48",
+      "description": "Số giờ trước sự kiện cho phép hủy",
+      "updated_by": "c8b1380b-3734-48e5-a931-ae561d9a32fd"
+    }
+  },
+  {
+    "model": "app_settings.appsetting",
+    "pk": "5b21466d-5faa-400b-b26c-713557e49609",
+    "fields": {
+      "created_at": "2026-04-17T08:22:00Z",
+      "updated_at": "2026-04-17T08:22:00Z",
+      "deleted_at": null,
+      "key": "seed.utc2.setting.002",
+      "value": "12",
+      "description": "Thiết lập mô phỏng UTC2 số 002",
+      "updated_by": "c8b1380b-3734-48e5-a931-ae561d9a32fd"
+    }
+  },
+  {
+    "model": "app_settings.appsetting",
+    "pk": "e3895207-d000-497c-b0f4-05321f026546",
+    "fields": {
+      "created_at": "2026-04-17T08:23:00Z",
+      "updated_at": "2026-04-17T08:23:00Z",
+      "deleted_at": null,
+      "key": "seed.utc2.setting.003",
+      "value": "13",
+      "description": "Thiết lập mô phỏng UTC2 số 003",
+      "updated_by": "c8b1380b-3734-48e5-a931-ae561d9a32fd"
+    }
+  },
+  {
+    "model": "events.eventcategory",
+    "pk": "55555555-5555-4555-8555-555555555555",
+    "fields": {
+      "created_at": "2026-04-17T08:20:00Z",
+      "updated_at": "2026-04-17T08:20:00Z",
+      "deleted_at": null,
+      "name": "Workshop",
+      "slug": "workshop",
+      "description": "Sự kiện workshop",
+      "icon": "briefcase",
+      "color": "#1E88E5",
+      "is_active": true
+    }
+  },
+  {
+    "model": "events.eventcategory",
+    "pk": "31269c8a-bb15-4334-92bc-c154addf1494",
+    "fields": {
+      "created_at": "2026-04-17T08:32:00Z",
+      "updated_at": "2026-04-17T08:32:00Z",
+      "deleted_at": null,
+      "name": "Âm nhạc",
+      "slug": "utc2-category-002",
+      "description": "Nhóm sự kiện âm nhạc UTC2",
+      "icon": "music",
+      "color": "#1E88E5",
+      "is_active": true
+    }
+  },
+  {
+    "model": "events.eventcategory",
+    "pk": "550959b4-cf3f-4d69-80bf-cc298dba5882",
+    "fields": {
+      "created_at": "2026-04-17T08:33:00Z",
+      "updated_at": "2026-04-17T08:33:00Z",
+      "deleted_at": null,
+      "name": "Học thuật",
+      "slug": "utc2-category-003",
+      "description": "Nhóm sự kiện học thuật UTC2",
+      "icon": "book",
+      "color": "#1E88E5",
+      "is_active": true
+    }
+  },
+  {
+    "model": "events.eventcategory",
+    "pk": "550959b4-cf3f-4d69-80bf-cc298dba7755",
+    "fields": {
+      "created_at": "2026-04-17T08:33:00Z",
+      "updated_at": "2026-04-17T08:33:00Z",
+      "deleted_at": null,
+      "name": "Thể thao",
+      "slug": "utc2-category-004",
+      "description": "Nhóm sự kiện thể thao UTC2",
+      "icon": "sports",
+      "color": "#1E88E5",
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.campus",
+    "pk": "66666666-6666-4666-8666-666666666666",
+    "fields": {
+      "created_at": "2026-04-17T08:25:00Z",
+      "updated_at": "2026-04-17T08:25:00Z",
+      "deleted_at": null,
+      "name": "UTC2 - Cơ sở Lê Văn Việt",
+      "code": "UTC2",
+      "address": "450-451 Lê Văn Việt, Phường Tăng Nhơn Phú, TP. Thủ Đức, TP.HCM",
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.building",
+    "pk": "77777777-7777-4777-8777-777777777777",
+    "fields": {
+      "created_at": "2026-04-17T08:30:00Z",
+      "updated_at": "2026-04-17T08:30:00Z",
+      "deleted_at": null,
+      "campus": "66666666-6666-4666-8666-666666666666",
+      "name": "Toàn nhà C1",
+      "code": "C1",
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.building",
+    "pk": "77777777-7777-4777-8777-777777777778",
+    "fields": {
+      "created_at": "2026-04-17T08:30:00Z",
+      "updated_at": "2026-04-17T08:30:00Z",
+      "deleted_at": null,
+      "campus": "66666666-6666-4666-8666-666666666666",
+      "name": "Toàn nhà đa năng",
+      "code": "DN",
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.building",
+    "pk": "77777777-7777-4777-8777-777777777755",
+    "fields": {
+      "created_at": "2026-04-17T08:30:00Z",
+      "updated_at": "2026-04-17T08:30:00Z",
+      "deleted_at": null,
+      "campus": "66666666-6666-4666-8666-666666666666",
+      "name": "Sân bóng đá",
+      "code": "SVD",
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.room",
+    "pk": "88888888-8888-4888-8888-888888888888",
+    "fields": {
+      "created_at": "2026-04-17T08:35:00Z",
+      "updated_at": "2026-04-17T08:35:00Z",
+      "deleted_at": null,
+      "building": "77777777-7777-4777-8777-777777777777",
+      "name": "Hội trường C1",
+      "code": "C1",
+      "capacity": 120,
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.room",
+    "pk": "88888888-8888-4888-8888-888888888887",
+    "fields": {
+      "created_at": "2026-04-17T08:35:00Z",
+      "updated_at": "2026-04-17T08:35:00Z",
+      "deleted_at": null,
+      "building": "77777777-7777-4777-8777-777777777755",
+      "name": "Sân bóng đá",
+      "code": "SVD",
+      "capacity": 120,
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.room",
+    "pk": "88888888-8888-4888-8888-888888888889",
+    "fields": {
+      "created_at": "2026-04-17T08:35:00Z",
+      "updated_at": "2026-04-17T08:35:00Z",
+      "deleted_at": null,
+      "building": "77777777-7777-4777-8777-777777777778",
+      "name": "Hội trường đa năng",
+      "code": "102",
+      "capacity": 120,
+      "is_active": true
+    }
+  },
+  {
+    "model": "locations.room",
+    "pk": "88888888-8888-4888-8888-888888888890",
+    "fields": {
+      "created_at": "2026-04-17T08:35:00Z",
+      "updated_at": "2026-04-17T08:35:00Z",
+      "deleted_at": null,
+      "building": "77777777-7777-4777-8777-777777777778",
+      "name": "Hội thảo Đa năng",
+      "code": "101",
+      "capacity": 120,
+      "is_active": true
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": "99999999-9999-4999-8999-999999999999",
+    "fields": {
+      "created_at": "2026-04-17T08:40:00Z",
+      "updated_at": "2026-04-17T08:40:00Z",
+      "deleted_at": null,
+      "code": "EVENT_CONFIRM",
+      "name": "UTC2 Event Confirmation",
+      "title_template": "UTC2 xác nhận đăng ký: {{event_title}}",
+      "message_template": "Bạn đã đăng ký thành công sự kiện {{event_title}} tại UTC2.",
+      "channel": "in_app",
+      "is_active": true
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": "abc6ebb1-d319-42de-b59e-2544c16eaa08",
+    "fields": {
+      "created_at": "2026-04-17T09:12:00Z",
+      "updated_at": "2026-04-17T09:12:00Z",
+      "deleted_at": null,
+      "code": "UTC2_TPL_002",
+      "name": "Mẫu thông báo UTC2 002",
+      "title_template": "Thông báo UTC2 002: {event_title}",
+      "message_template": "Nội dung thông báo UTC2 mẫu 002 cho sự kiện {event_title}.",
+      "channel": "in_app",
+      "is_active": true
+    }
+  },
+  {
+    "model": "events.event",
+    "pk": "12121212-1212-4121-8121-121212121212",
+    "fields": {
+      "created_at": "2026-04-17T08:50:00Z",
+      "updated_at": "2026-04-17T08:50:00Z",
+      "deleted_at": null,
+      "category": "55555555-5555-4555-8555-555555555555",
+      "room": "88888888-8888-4888-8888-888888888888",
+      "created_by": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "title": "Talkshow Tư duy toàn cầu - Hành trang tương lai",
+      "slug": "talkshow-global-thinking-future-journey-2026",
+      "description": "Talkshow học thuật tại UTC2 với định hướng tư duy toàn cầu cho sinh viên kỹ thuật.",
+      "visibility": "public",
+      "status": "active",
+      "registration_open_at": "2026-05-20T00:00:00Z",
+      "registration_close_at": "2026-06-01T01:00:00Z",
+      "cancellation_deadline_at": "2026-06-01T01:00:00Z",
+      "start_at": "2026-06-01T01:00:00Z",
+      "end_at": "2026-06-01T04:00:00Z",
+      "max_capacity": 80,
+      "location_snapshot": "UTC2 - Hội trường C1, 450-451 Lê Văn Việt, TP. Thủ Đức",
+      "cover_image_key": "events/65943bed-44b9-47ea-b4df-76cd296fc55e/covers/72052c6cfa9143d19828650dfb497e3b-ec4ec6fe-7298-4871-a8f9-28bd17f47bd6.jpg",
+      "deep_link": "uevent://events/talkshow-global-thinking-future-journey-2026"
+    }
+  },
+  {
+    "model": "events.event",
+    "pk": "bdeff3a1-f276-44c7-860e-974ee91ce5f0",
+    "fields": {
+      "created_at": "2026-04-17T09:42:00Z",
+      "updated_at": "2026-04-17T09:42:00Z",
+      "deleted_at": null,
+      "category": "31269c8a-bb15-4334-92bc-c154addf1494",
+      "room": "88888888-8888-4888-8888-888888888887",
+      "created_by": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "title": "Sự kiện âm nhạc UTC2 002",
+      "slug": "utc2-su-kien-002-2026",
+      "description": "Hoạt động âm nhạc, tập trung đổi mới sáng tạo và công nghệ.",
+      "visibility": "public",
+      "status": "approved",
+      "registration_open_at": "2026-05-20T00:00:00Z",
+      "registration_close_at": "2026-06-08T08:00:00Z",
+      "cancellation_deadline_at": "2026-06-08T08:00:00Z",
+      "start_at": "2026-06-08T08:00:00Z",
+      "end_at": "2026-06-08T10:00:00Z",
+      "max_capacity": 120,
+      "location_snapshot": "UTC2 - Sân bóng đá, TP. Thủ Đức",
+      "cover_image_key": "events/65943bed-44b9-47ea-b4df-76cd296fc55e/covers/72052c6cfa9143d19828650dfb497e3b-ec4ec6fe-7298-4871-a8f9-28bd17f47bd6.jpg",
+      "deep_link": "uevent://events/utc2-su-kien-002-2026"
+    }
+  },
+  {
+    "model": "events.event",
+    "pk": "3cce7b09-c99c-4384-b0c7-de6640f0bde5",
+    "fields": {
+      "created_at": "2026-04-17T09:43:00Z",
+      "updated_at": "2026-04-17T09:43:00Z",
+      "deleted_at": null,
+      "category": "550959b4-cf3f-4d69-80bf-cc298dba5882",
+      "room": "88888888-8888-4888-8888-888888888889",
+      "created_by": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "title": "Sự kiện âm nhạc UTC2 003",
+      "slug": "utc2-su-kien-003-2026",
+      "description": "Hoạt động âm nhạc, tập trung đổi mới sáng tạo và công nghệ.",
+      "visibility": "public",
+      "status": "draft",
+      "registration_open_at": "2026-05-20T00:00:00Z",
+      "registration_close_at": "2026-06-15T07:00:00Z",
+      "cancellation_deadline_at": "2026-06-15T07:00:00Z",
+      "start_at": "2026-06-15T07:00:00Z",
+      "end_at": "2026-06-15T11:00:00Z",
+      "max_capacity": 60,
+      "location_snapshot": "UTC2 - Hội trường/Cụm phòng số 003, TP. Thủ Đức",
+      "cover_image_key": "events/65943bed-44b9-47ea-b4df-76cd296fc55e/covers/72052c6cfa9143d19828650dfb497e3b-ec4ec6fe-7298-4871-a8f9-28bd17f47bd6.jpg",
+      "deep_link": "uevent://events/utc2-su-kien-003-2026"
+    }
+  },
+  {
+    "model": "events.eventorganizer",
+    "pk": "16161616-1616-4161-8161-161616161616",
+    "fields": {
+      "created_at": "2026-04-17T08:55:00Z",
+      "updated_at": "2026-04-17T08:55:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "organizer_role": "owner",
+      "joined_at": "2026-05-17T08:00:00Z"
+    }
+  },
+  {
+    "model": "events.eventorganizer",
+    "pk": "b3a5f064-2bdc-4e25-8623-c840dc277b72",
+    "fields": {
+      "created_at": "2026-04-17T10:02:00Z",
+      "updated_at": "2026-04-17T10:02:00Z",
+      "deleted_at": null,
+      "event": "bdeff3a1-f276-44c7-860e-974ee91ce5f0",
+      "user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "organizer_role": "owner",
+      "joined_at": "2026-05-17T08:00:00Z"
+    }
+  },
+  {
+    "model": "events.eventorganizer",
+    "pk": "d5edb148-82c9-4dfd-8e62-f1efa3d9a5c9",
+    "fields": {
+      "created_at": "2026-04-17T10:03:00Z",
+      "updated_at": "2026-04-17T10:03:00Z",
+      "deleted_at": null,
+      "event": "3cce7b09-c99c-4384-b0c7-de6640f0bde5",
+      "user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "organizer_role": "owner",
+      "joined_at": "2026-05-17T08:00:00Z"
+    }
+  },
+  {
+    "model": "events.registrationformfield",
+    "pk": "17171717-1717-4171-8171-171717171717",
+    "fields": {
+      "created_at": "2026-04-17T08:56:00Z",
+      "updated_at": "2026-04-17T08:56:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "field_key": "student_id",
+      "label": "Mã số sinh viên (10 chữ số)",
+      "field_type": "text",
+      "is_required": true,
+      "is_editable_after_submit": false,
+      "options_json": [],
+      "sort_order": 1
+    }
+  },
+  {
+    "model": "events.registrationformfield",
+    "pk": "619257f1-e79a-46d0-ae2c-f0635913a313",
+    "fields": {
+      "created_at": "2026-04-17T10:12:00Z",
+      "updated_at": "2026-04-17T10:12:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "field_key": "field_002",
+      "label": "Thông tin bổ sung 002",
+      "field_type": "text",
+      "is_required": false,
+      "is_editable_after_submit": false,
+      "options_json": [],
+      "sort_order": 2
+    }
+  },
+  {
+    "model": "events.registrationformfield",
+    "pk": "b3a402bc-c45a-47e4-a1f0-edf7953bff6a",
+    "fields": {
+      "created_at": "2026-04-17T10:13:00Z",
+      "updated_at": "2026-04-17T10:13:00Z",
+      "deleted_at": null,
+      "event": "bdeff3a1-f276-44c7-860e-974ee91ce5f0",
+      "field_key": "field_003",
+      "label": "Thông tin bổ sung 003",
+      "field_type": "text",
+      "is_required": true,
+      "is_editable_after_submit": false,
+      "options_json": [],
+      "sort_order": 3
+    }
+  },
+  {
+    "model": "events.eventinvitation",
+    "pk": "18181818-1818-4181-8181-181818181818",
+    "fields": {
+      "created_at": "2026-04-17T08:57:00Z",
+      "updated_at": "2026-04-17T08:57:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "email": "2251050001@st.utc2.edu.vn",
+      "invited_user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "token": "invite-token-utc2-thi-sinh-01",
+      "expires_at": "2026-04-11T23:00:00Z",
+      "inviter_user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "invite_channel": "email",
+      "invite_target": "2251050001@st.utc2.edu.vn",
+      "sent_at": "2026-04-17T09:00:00Z",
+      "responded_at": null,
+      "status": "accepted"
+    }
+  },
+  {
+    "model": "events.eventinvitation",
+    "pk": "be62c051-58eb-4d32-9b74-8652168e5dfc",
+    "fields": {
+      "created_at": "2026-04-17T10:22:00Z",
+      "updated_at": "2026-04-17T10:22:00Z",
+      "deleted_at": null,
+      "event": "bdeff3a1-f276-44c7-860e-974ee91ce5f0",
+      "email": "2251050002@st.utc2.edu.vn",
+      "invited_user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "token": "invite-token-utc2-002",
+      "expires_at": "2026-04-17T16:22:00Z",
+      "inviter_user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "invite_channel": "email",
+      "invite_target": "2251050002@st.utc2.edu.vn",
+      "sent_at": "2026-04-17T10:22:00Z",
+      "responded_at": null,
+      "status": "pending"
+    }
+  },
+  {
+    "model": "registrations.eventregistration",
+    "pk": "19191919-1919-4191-8191-191919191919",
+    "fields": {
+      "created_at": "2026-04-17T09:02:00Z",
+      "updated_at": "2026-04-17T09:02:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "status": "checked_in",
+      "form_answers_jsonb": {
+        "student_id": "SV000002"
+      },
+      "answers_locked": false,
+      "registered_at": "2026-05-17T08:00:00Z",
+      "cancelled_at": null,
+      "cancel_reason": null
+    }
+  },
+  {
+    "model": "registrations.eventregistration",
+    "pk": "866c15df-ec44-465a-80d1-9205c9e603b2",
+    "fields": {
+      "created_at": "2026-04-17T10:32:00Z",
+      "updated_at": "2026-04-17T10:32:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "status": "waitlisted",
+      "form_answers_jsonb": {
+        "student_id": "5651070004"
+      },
+      "answers_locked": false,
+      "registered_at": "2026-05-17T08:00:00Z",
+      "cancelled_at": null,
+      "cancel_reason": null
+    }
+  },
+  {
+    "model": "registrations.eventregistration",
+    "pk": "9e18810f-1f22-41ad-98a6-1349175d567f",
+    "fields": {
+      "created_at": "2026-04-17T10:33:00Z",
+      "updated_at": "2026-04-17T10:33:00Z",
+      "deleted_at": null,
+      "event": "bdeff3a1-f276-44c7-860e-974ee91ce5f0",
+      "user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "status": "registered",
+      "form_answers_jsonb": {
+        "student_id": "5651070005"
+      },
+      "answers_locked": false,
+      "registered_at": "2026-05-17T08:00:00Z",
+      "cancelled_at": null,
+      "cancel_reason": null
+    }
+  },
+  {
+    "model": "registrations.ticket",
+    "pk": "1a1a1a1a-1a1a-41a1-81a1-1a1a1a1a1a1a",
+    "fields": {
+      "created_at": "2026-04-17T09:03:00Z",
+      "updated_at": "2026-04-17T09:03:00Z",
+      "deleted_at": null,
+      "registration": "19191919-1919-4191-8191-191919191919",
+      "ticket_code": "DEMO-TICKET-001",
+      "qr_payload": "TICKET:DEMO-TICKET-001",
+      "qr_signature": "seed-signature-0001",
+      "status": "used",
+      "issued_at": "2026-05-17T08:00:00Z",
+      "used_at": "2026-06-01T01:10:00Z",
+      "expires_at": "2026-06-01T04:00:00Z"
+    }
+  },
+  {
+    "model": "registrations.ticket",
+    "pk": "4220f716-6709-48c3-a202-94e70507fbb9",
+    "fields": {
+      "created_at": "2026-04-17T10:42:00Z",
+      "updated_at": "2026-04-17T10:42:00Z",
+      "deleted_at": null,
+      "registration": "9e18810f-1f22-41ad-98a6-1349175d567f",
+      "ticket_code": "DEMO-TICKET-002",
+      "qr_payload": "TICKET:DEMO-TICKET-002",
+      "qr_signature": "seed-signature-0002",
+      "status": "valid",
+      "issued_at": "2026-05-17T08:00:00Z",
+      "used_at": null,
+      "expires_at": "2026-06-08T10:00:00Z"
+    }
+  },
+  {
+    "model": "registrations.registrationcancellationrequest",
+    "pk": "1c1c1c1c-1c1c-41c1-81c1-1c1c1c1c1c1c",
+    "fields": {
+      "created_at": "2026-04-17T09:05:00Z",
+      "updated_at": "2026-04-17T09:05:00Z",
+      "deleted_at": null,
+      "registration": "866c15df-ec44-465a-80d1-9205c9e603b2",
+      "event": "12121212-1212-4121-8121-121212121212",
+      "requester_user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "reason": "Bận việc đột xuất",
+      "status": "pending",
+      "requested_at": "2026-04-17T09:05:00Z",
+      "reviewed_by_user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "reviewed_at": null
+    }
+  },
+  {
+    "model": "interactions.eventquestion",
+    "pk": "1d1d1d1d-1d1d-41d1-81d1-1d1d1d1d1d1d",
+    "fields": {
+      "created_at": "2026-04-17T09:06:00Z",
+      "updated_at": "2026-04-17T09:06:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "question_text": "Slide talkshow Tư duy toàn cầu có được gửi qua email st.utc2.edu.vn không?",
+      "is_anonymous": false,
+      "answer_text": "Có, Ban tổ chức sẽ gửi tài liệu trong 24 giờ qua email @st.utc2.edu.vn.",
+      "answered_by": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "moderation_status": "visible",
+      "asked_at": "2026-04-17T09:06:00Z",
+      "answered_at": "2026-04-17T09:30:00Z"
+    }
+  },
+  {
+    "model": "interactions.eventquestion",
+    "pk": "c7ff81cc-cd60-46a4-8569-2a1e7747fa90",
+    "fields": {
+      "created_at": "2026-04-17T11:12:00Z",
+      "updated_at": "2026-04-17T11:22:00Z",
+      "deleted_at": null,
+      "event": "bdeff3a1-f276-44c7-860e-974ee91ce5f0",
+      "user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "question_text": "Câu hỏi học thuật UTC2 số 002: lịch trình sự kiện thế nào?",
+      "is_anonymous": false,
+      "answer_text": "Ban tổ chức phản hồi câu hỏi số 002 trong ngày.",
+      "answered_by": null,
+      "moderation_status": "visible",
+      "asked_at": "2026-04-17T11:12:00Z",
+      "answered_at": "2026-04-17T11:22:00Z"
+    }
+  },
+  {
+    "model": "interactions.eventfeedback",
+    "pk": "1e1e1e1e-1e1e-41e1-81e1-1e1e1e1e1e1e",
+    "fields": {
+      "created_at": "2026-04-17T09:07:00Z",
+      "updated_at": "2026-04-17T09:07:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "rating": 5,
+      "content": "Nội dung thiết thực, bám sát định hướng nghề nghiệp và chuyển đổi số tại UTC2.",
+      "is_anonymous": false
+    }
+  },
+  {
+    "model": "interactions.eventfeedback",
+    "pk": "d8163e27-d065-4284-aa20-32f04ad3125e",
+    "fields": {
+      "created_at": "2026-04-17T11:32:00Z",
+      "updated_at": "2026-04-17T11:32:00Z",
+      "deleted_at": null,
+      "event": "bdeff3a1-f276-44c7-860e-974ee91ce5f0",
+      "user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "rating": 3,
+      "content": "Phản hồi UTC2 số 002: nội dung hữu ích và sát thực tế.",
+      "is_anonymous": false
+    }
+  },
+  {
+    "model": "registrations.checkinlog",
+    "pk": "1f1f1f1f-1f1f-41f1-81f1-1f1f1f1f1f1f",
+    "fields": {
+      "created_at": "2026-04-17T09:08:00Z",
+      "updated_at": "2026-04-17T09:08:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "ticket": "1a1a1a1a-1a1a-41a1-81a1-1a1a1a1a1a1a",
+      "scanner_user": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "checked_in_at": "2026-06-01T01:10:00Z",
+      "result": "success",
+      "note": "Check-in thành công tại Hội trường C1 - UTC2"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": "20202020-2020-4020-8020-202020202020",
+    "fields": {
+      "created_at": "2026-04-17T09:09:00Z",
+      "updated_at": "2026-04-17T09:09:00Z",
+      "deleted_at": null,
+      "template": "99999999-9999-4999-8999-999999999999",
+      "event": "12121212-1212-4121-8121-121212121212",
+      "created_by": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
+      "type": "announcement",
+      "audience_type": "custom",
+      "title": "Xác nhận đăng ký talkshow UTC2",
+      "message": "Bạn đã đăng ký thành công talkshow Tư duy toàn cầu - Hành trang tương lai.",
+      "status": "sent",
+      "scheduled_at": "2026-04-17T09:10:00Z",
+      "sent_at": "2026-05-17T08:00:00Z"
+    }
+  },
+  {
+    "model": "notifications.notification",
+    "pk": "f1ecf0f5-7e85-4a96-93df-c66d07c8befc",
+    "fields": {
+      "created_at": "2026-04-17T11:52:00Z",
+      "updated_at": "2026-04-17T11:52:00Z",
+      "deleted_at": null,
+      "template": "abc6ebb1-d319-42de-b59e-2544c16eaa08",
+      "event": "bdeff3a1-f276-44c7-860e-974ee91ce5f0",
+      "created_by": "c8b1380b-3734-48e5-a931-ae561d9a32fd",
+      "type": "announcement",
+      "audience_type": "custom",
+      "title": "Thông báo UTC2 số 002",
+      "message": "Nội dung thông báo số 002 cho sinh viên UTC2.",
+      "status": "sent",
+      "scheduled_at": "2026-04-17T11:52:00Z",
+      "sent_at": "2026-05-17T08:00:00Z"
+    }
+  },
+  {
+    "model": "notifications.notificationrecipient",
+    "pk": "23232323-2323-4232-8232-232323232323",
+    "fields": {
+      "created_at": "2026-04-17T09:13:00Z",
+      "updated_at": "2026-04-17T09:13:00Z",
+      "deleted_at": null,
+      "notification": "20202020-2020-4020-8020-202020202020",
+      "user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "delivery_status": "sent",
+      "delivered_at": "2026-05-17T08:00:00Z",
+      "read_at": "2026-04-17T09:15:00Z"
+    }
+  },
+  {
+    "model": "notifications.notificationrecipient",
+    "pk": "da93d42c-f611-4557-b2ca-dd58549dc0cd",
+    "fields": {
+      "created_at": "2026-04-17T12:22:00Z",
+      "updated_at": "2026-04-17T12:22:00Z",
+      "deleted_at": null,
+      "notification": "20202020-2020-4020-8020-202020202020",
+      "user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "delivery_status": "sent",
+      "delivered_at": "2026-05-17T08:00:00Z",
+      "read_at": null
+    }
+  },
+  {
+    "model": "notifications.notificationrecipient",
+    "pk": "f6572332-2b8a-421b-a3cc-8b0c9f511679",
+    "fields": {
+      "created_at": "2026-04-17T12:23:00Z",
+      "updated_at": "2026-04-17T12:23:00Z",
+      "deleted_at": null,
+      "notification": "f1ecf0f5-7e85-4a96-93df-c66d07c8befc",
+      "user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "delivery_status": "sent",
+      "delivered_at": "2026-05-17T08:00:00Z",
+      "read_at": "2026-04-17T12:24:00Z"
+    }
+  },
+  {
+    "model": "notifications.notificationrecipient",
+    "pk": "b9e59a93-e4e6-4634-9453-f2a58d8eb7f0",
+    "fields": {
+      "created_at": "2026-04-17T12:24:00Z",
+      "updated_at": "2026-04-17T12:24:00Z",
+      "deleted_at": null,
+      "notification": "f1ecf0f5-7e85-4a96-93df-c66d07c8befc",
+      "user": "09a052e7-dce7-449d-b7dc-df903c0cf721",
+      "delivery_status": "sent",
+      "delivered_at": "2026-05-17T08:00:00Z",
+      "read_at": null
+    }
+  },
+  {
+    "model": "moderation.moderationlog",
+    "pk": "21212121-2121-4121-8121-212121212121",
+    "fields": {
+      "created_at": "2026-04-17T09:11:00Z",
+      "updated_at": "2026-04-17T09:11:00Z",
+      "deleted_at": null,
+      "event": "12121212-1212-4121-8121-121212121212",
+      "admin_user": "c8b1380b-3734-48e5-a931-ae561d9a32fd",
+      "report_type": "manual_review",
+      "action": "approve",
+      "reason": "Nội dung sự kiện hợp lệ"
+    }
+  },
+  {
+    "model": "moderation.moderationlog",
+    "pk": "5ccf57d4-a2e2-4fe3-9e02-b572fbd1a72f",
+    "fields": {
+      "created_at": "2026-04-17T12:02:00Z",
+      "updated_at": "2026-04-17T12:02:00Z",
+      "deleted_at": null,
+      "event": "bdeff3a1-f276-44c7-860e-974ee91ce5f0",
+      "admin_user": "c8b1380b-3734-48e5-a931-ae561d9a32fd",
+      "report_type": "manual_review",
+      "action": "reopen",
+      "reason": "Kiểm duyệt sự kiện UTC2 số 002"
+    }
+  },
+  {
+    "model": "support.supportticket",
+    "pk": "22222222-aaaa-4222-8aaa-222222222222",
+    "fields": {
+      "created_at": "2026-04-17T09:12:00Z",
+      "updated_at": "2026-04-17T09:12:00Z",
+      "deleted_at": null,
+      "user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "subject": "Can ho tro dang nhap Keycloak",
+      "category": "account",
+      "description": "Sinh vien can duoc ho tro lien ket tai khoan UTC2 voi Keycloak.",
+      "status": "open",
+      "priority": "medium",
+      "assigned_to": "c8b1380b-3734-48e5-a931-ae561d9a32fd"
+    }
+  },
+  {
+    "model": "support.supportmessage",
+    "pk": "24242424-2424-4242-8242-242424242424",
+    "fields": {
+      "created_at": "2026-04-17T09:14:00Z",
+      "updated_at": "2026-04-17T09:14:00Z",
+      "deleted_at": null,
+      "ticket": "22222222-aaaa-4222-8aaa-222222222222",
+      "author_user": "04598f18-9ea1-4480-81f3-e923f8cda5b4",
+      "content": "Bộ phận hỗ trợ đã cấp lại thông tin đăng nhập email UTC2 và hướng dẫn đổi mật khẩu lần đầu.",
+      "is_staff": false
+    }
+  },
+  {
+    "model": "support.supportmessage",
+    "pk": "515220fc-5583-42ab-bee3-e57eeaf213e2",
+    "fields": {
+      "created_at": "2026-04-17T12:32:00Z",
+      "updated_at": "2026-04-17T12:32:00Z",
+      "deleted_at": null,
+      "ticket": "22222222-aaaa-4222-8aaa-222222222222",
+      "author_user": "c8b1380b-3734-48e5-a931-ae561d9a32fd",
+      "content": "Phản hồi hỗ trợ UTC2 số 002: đã ghi nhận và đang xử lý.",
+      "is_staff": true
+    }
+  }
+]

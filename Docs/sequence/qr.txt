@@ -1,0 +1,48 @@
+@startuml
+autonumber
+actor "BTC (Người soát vé)" as Organizer
+participant "Mobile App" as App
+participant "Ticket Service" as Ticket
+participant "Check-in Service" as Checkin
+participant "Event Service" as Event
+
+Organizer -> App : Quét mã QR
+App -> Ticket : verifyQR(qrCode)
+
+activate Ticket
+Ticket -> Ticket : checkFormat(qrCode)
+
+alt Định dạng QR không hợp lệ
+    Ticket --> App : Error: Invalid QR Format
+    App --> Organizer : Hiển thị: "Mã QR không đúng định dạng"
+else Định dạng hợp lệ
+    Ticket -> Checkin : validateTicket(qrCode)
+    activate Checkin
+
+    Checkin -> Event : checkEventStatus(eventId)
+    activate Event
+    Event --> Checkin : Status (Ongoing/Ended/Not Started)
+    deactivate Event
+
+    alt Sự kiện chưa bắt đầu hoặc đã kết thúc
+        Checkin --> App : Error: Event Not Available
+        App --> Organizer : Hiển thị: "Sự kiện chưa đến giờ check-in"
+    else Sự kiện đang diễn ra
+        Checkin -> Checkin : checkTicketUsage(qrCode)
+
+        alt Vé đã được sử dụng trước đó
+            Checkin --> App : Error: Already Checked-in
+            App --> Organizer : Hiển thị: "Cảnh báo: Vé này đã check-in rồi!"
+        else Vé không tồn tại/Hết hạn
+            Checkin --> App : Error: Ticket Invalid
+            App --> Organizer : Hiển thị: "Vé không hợp lệ hoặc đã bị hủy"
+        else Vé hợp lệ & Chưa sử dụng
+            Checkin -> Checkin : markAttendance(userId)
+            Checkin --> App : 200 OK (Check-in Success)
+            App --> Organizer : Hiển thị: "Check-in thành công: [Tên khách hàng]"
+        end
+    end
+    deactivate Checkin
+end
+deactivate Ticket
+@enduml

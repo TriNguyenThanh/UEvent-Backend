@@ -1,0 +1,94 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="Page-1" id="fZAOuBn_7j34MvBCbk-X">
+    <mxGraphModel dx="1042" dy="640" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="boundary_org" parent="1" style="shape=rect;html=1;verticalAlign=top;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;" value="Phân hệ Ban tổ chức" vertex="1">
+          <mxGeometry height="550" width="500" x="150" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="a_org" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Ban tổ chức" vertex="1">
+          <mxGeometry height="60" width="30" x="40" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="a_ext2" parent="1" style="shape=rect;html=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" value="&amp;lt;&amp;lt;system&amp;gt;&amp;gt;&lt;br&gt;Hệ thống ngoài" vertex="1">
+          <mxGeometry height="50" width="110" x="700" y="205" as="geometry" />
+        </mxCell>
+        <mxCell id="o1" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Tạo sự kiện" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="o2" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Cập nhật sự kiện" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="o3" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Quản lý ban tổ chức" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="o4" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Mời người tham gia" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="o5" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Chia sẻ sự kiện" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="o6" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Quản lý người tham dự" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="o7" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Xuất danh sách tham dự" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="o8" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Check-in người tham dự" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="o9" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Quản lý câu hỏi" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="o10" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Quản lý phản hồi" vertex="1">
+          <mxGeometry height="40" width="150" x="200" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Gửi thông báo" vertex="1">
+          <mxGeometry height="40" width="140" x="460" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Xác thực vé" vertex="1">
+          <mxGeometry height="40" width="140" x="460" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o1" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o2" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o3" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o4" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o5" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o6" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o7" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o8" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o9" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_o10" edge="1" parent="1" source="a_org" style="endArrow=none;html=1;" target="o10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc_o1" edge="1" parent="1" source="o4" style="endArrow=open;endSize=12;dashed=1;html=1;" target="s3" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc_o2" edge="1" parent="1" source="o8" style="endArrow=open;endSize=12;dashed=1;html=1;" target="s2" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_o" edge="1" parent="1" source="s3" style="endArrow=none;html=1;" target="a_ext2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

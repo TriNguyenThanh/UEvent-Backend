@@ -1,0 +1,61 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-backend-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy on EC2
+    runs-on: [self-hosted, Linux]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load EC2 environment files
+        run: |
+          set -euo pipefail
+
+          ENV_FILE_PATH="${BACKEND_ENV_FILE_PATH:-/opt/uevent/backend/.env}"
+          FIREBASE_FILE_PATH="${FIREBASE_SERVICE_ACCOUNT_PATH:-/opt/uevent/backend/firebase-service-account.json}"
+
+          if [ ! -f "$ENV_FILE_PATH" ]; then
+            echo "::error::Missing backend env file on EC2: $ENV_FILE_PATH"
+            exit 1
+          fi
+
+          install -m 600 "$ENV_FILE_PATH" .env
+
+          if [ -f "$FIREBASE_FILE_PATH" ]; then
+            install -m 600 "$FIREBASE_FILE_PATH" firebase-service-account.json
+          else
+            printf '{}\n' > firebase-service-account.json
+            chmod 600 firebase-service-account.json
+          fi
+
+      - name: Deploy with Docker Compose
+        run: |
+          set -euo pipefail
+
+          if docker compose version >/dev/null 2>&1; then
+            COMPOSE="docker compose"
+          else
+            COMPOSE="docker-compose"
+          fi
+
+          $COMPOSE up -d --build --remove-orphans
+          $COMPOSE ps
+
+      - name: Cleanup Docker images
+        if: always()
+        run: docker image prune -f
