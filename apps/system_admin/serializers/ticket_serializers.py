@@ -98,13 +98,14 @@ class AdminTicketCancelInputSerializer(serializers.Serializer):
 class AdminTicketScanInputSerializer(serializers.Serializer):
     event_id = serializers.UUIDField()
     ticket_code = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    email = serializers.EmailField(required=False, allow_blank=True)
     qr_payload = serializers.CharField(required=False, allow_blank=True)
     qr_signature = serializers.CharField(required=False, allow_blank=True)
     note = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)
 
     def validate(self, attrs):
-        if not attrs.get("ticket_code") and not attrs.get("qr_payload"):
-            raise serializers.ValidationError({"ticket": "Cần nhập mã vé hoặc QR payload."})
+        if not attrs.get("ticket_code") and not attrs.get("email") and not attrs.get("qr_payload"):
+            raise serializers.ValidationError({"ticket": "Cần nhập email, mã vé hoặc QR payload."})
         return attrs
 
 

@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied
 from rest_framework import generics, status
@@ -8,8 +9,11 @@ from drf_yasg.utils import swagger_auto_schema
 
 from apps.events.models import Event, EventOrganizer
 from apps.events.services import assert_event_organizer, is_event_organizer
-from apps.registrations.models import EventRegistration, Ticket
+from apps.registrations.models import CheckinLog, EventRegistration, Ticket
 from apps.registrations.serializers import (
+    EventCheckinLogSerializer,
+    EventCheckinScanInputSerializer,
+    EventCheckinScanResultSerializer,
     EventRoleSerializer,
     RegistrationCancelSerializer,
     RegistrationCreateSerializer,
@@ -25,6 +29,7 @@ from apps.registrations.services import (
     create_event_registration,
     grant_cohost_role_to_registration,
     issue_registration_qr,
+    process_checkin_scan,
 )
 from common.serializers import ApiErrorResponseSerializer
 
@@ -214,6 +219,158 @@ class OrganizerEventRegistrationListView(generics.ListAPIView):
         return super().get(request, *args, **kwargs)
 
 
+class EventAttendeeListView(generics.ListAPIView):
+    """
+    GET /api/v1/events/{event_id}/attendees/
+
+    Organizer-only attendee list with status and search filters for check-in.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = RegistrationListSerializer
+
+    def get_event(self):
+        event = get_object_or_404(Event.objects.prefetch_related("organizers"), id=self.kwargs["event_id"])
+        assert_event_organizer(self.request.user, event)
+        return event
+
+    def get_queryset(self):  # type: ignore[override]
+        params = self.request.query_params
+        queryset = (
+            EventRegistration.objects.filter(event=self.get_event())
+            .select_related("event", "user", "ticket")
+            .order_by("-registered_at", "-created_at")
+        )
+
+        status_filter = params.get("status")
+        if status_filter == "checked_in":
+            queryset = queryset.filter(status=EventRegistration.RegistrationStatus.CHECKED_IN)
+        elif status_filter == "not_checked_in":
+            queryset = queryset.filter(
+                status__in=[
+                    EventRegistration.RegistrationStatus.REGISTERED,
+                    EventRegistration.RegistrationStatus.WAITLISTED,
+                ]
+            )
+        elif status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        search = params.get("search")
+        if search:
+            queryset = queryset.filter(
+                Q(user__username__icontains=search)
+                | Q(user__full_name__icontains=search)
+                | Q(user__email__icontains=search)
+                | Q(ticket__ticket_code__icontains=search)
+            )
+        return queryset
+
+    @swagger_auto_schema(
+        operation_summary="List Event Attendees",
+        operation_description="Organizer xem danh sách attendee của sự kiện để phục vụ check-in.",
+        responses={200: RegistrationListSerializer(many=True), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Check-in"],
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class EventCheckinScanView(APIView):
+    """
+    POST /api/v1/events/{event_id}/check-in/scan/
+
+    Organizer scans a ticket code or signed QR payload and records check-in.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Scan Event Check-in",
+        operation_description="Organizer quét QR hoặc nhập mã vé để check-in attendee.",
+        request_body=EventCheckinScanInputSerializer,
+        responses={200: EventCheckinScanResultSerializer(), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Check-in"],
+    )
+    def post(self, request, event_id):
+        event = get_object_or_404(Event.objects.prefetch_related("organizers"), id=event_id)
+        assert_event_organizer(request.user, event)
+
+        serializer = EventCheckinScanInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        scan_data = serializer.validated_data
+        result = process_checkin_scan(
+            event_id=event.id,
+            ticket_code=scan_data.get("ticket_code"),
+            email=scan_data.get("email"),
+            qr_payload=scan_data.get("qr_payload"),
+            qr_signature=scan_data.get("qr_signature"),
+            scanner_user=request.user,
+            note=scan_data.get("note"),
+        )
+        return Response(EventCheckinScanResultSerializer(result).data, status=status.HTTP_200_OK)
+
+
+class EventCheckinLogListView(generics.ListAPIView):
+    """
+    GET /api/v1/events/{event_id}/check-ins/
+
+    Organizer-only check-in log list for an event.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = EventCheckinLogSerializer
+
+    def get_event(self):
+        event = get_object_or_404(Event.objects.prefetch_related("organizers"), id=self.kwargs["event_id"])
+        assert_event_organizer(self.request.user, event)
+        return event
+
+    def get_queryset(self):  # type: ignore[override]
+        params = self.request.query_params
+        queryset = (
+            CheckinLog.objects.filter(event=self.get_event())
+            .select_related(
+                "event",
+                "scanner_user",
+                "ticket",
+                "ticket__registration",
+                "ticket__registration__event",
+                "ticket__registration__user",
+            )
+            .order_by("-checked_in_at", "-created_at")
+        )
+
+        result_filter = params.get("result")
+        if result_filter:
+            queryset = queryset.filter(result=result_filter)
+
+        ticket_id = params.get("ticket_id")
+        if ticket_id:
+            queryset = queryset.filter(ticket_id=ticket_id)
+
+        user_id = params.get("user_id")
+        if user_id:
+            queryset = queryset.filter(ticket__registration__user_id=user_id)
+
+        search = params.get("search")
+        if search:
+            queryset = queryset.filter(
+                Q(ticket__ticket_code__icontains=search)
+                | Q(ticket__registration__user__username__icontains=search)
+                | Q(ticket__registration__user__full_name__icontains=search)
+                | Q(ticket__registration__user__email__icontains=search)
+                | Q(scanner_user__username__icontains=search)
+                | Q(scanner_user__email__icontains=search)
+            )
+        return queryset
+
+    @swagger_auto_schema(
+        operation_summary="List Event Check-in Logs",
+        operation_description="Organizer xem lịch sử check-in của một sự kiện.",
+        responses={200: EventCheckinLogSerializer(many=True), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Check-in"],
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
 class OrganizerRegistrationGrantCohostView(APIView):
     """
     POST /api/v1/organizer/events/{event_id}/registrations/{registration_id}/cohost/
@@ -319,6 +476,44 @@ class TicketListView(generics.ListAPIView):
             .select_related("registration", "registration__event")
             .order_by("-issued_at", "-created_at")
         )
+
+
+def get_user_ticket_for_event(*, event_id, user):
+    return get_object_or_404(
+        Ticket.objects.select_related("registration", "registration__event", "registration__user"),
+        registration__event_id=event_id,
+        registration__user_id=user.id,
+    )
+
+
+class EventTicketDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get My Event Ticket Detail",
+        operation_description="User xem chi tiết vé của bản thân trong một sự kiện theo event id.",
+        responses={200: TicketDetailSerializer(), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Tickets"],
+    )
+    def get(self, request, event_id):
+        ticket = get_user_ticket_for_event(event_id=event_id, user=request.user)
+        return Response(TicketDetailSerializer(ticket).data, status=status.HTTP_200_OK)
+
+
+class EventTicketQrAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get My Event Ticket QR",
+        operation_description="User lấy QR payload tạm thời của vé trong một sự kiện theo event id.",
+        responses={200: RegistrationQrSerializer(), **REGISTRATION_ERROR_RESPONSES},
+        tags=["Tickets"],
+    )
+    def get(self, request, event_id):
+        ticket = get_user_ticket_for_event(event_id=event_id, user=request.user)
+        qr_data = issue_registration_qr(registration=ticket.registration)
+        serializer = RegistrationQrSerializer(qr_data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TicketDetailView(generics.RetrieveAPIView):

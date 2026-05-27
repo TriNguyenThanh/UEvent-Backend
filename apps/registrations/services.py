@@ -1,10 +1,12 @@
+import base64
+import binascii
 import hashlib
 import hmac
+import json
 import secrets
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
@@ -15,7 +17,6 @@ from common.exceptions import ConflictError
 
 QR_PAYLOAD_PREFIX = "TICKET:"
 QR_TOKEN_TTL_SECONDS = 15
-QR_TOKEN_CACHE_PREFIX = "ticket_qr"
 RE_REGISTERABLE_STATUSES = {
     EventRegistration.RegistrationStatus.CANCELLED,
     EventRegistration.RegistrationStatus.REJECTED,
@@ -49,27 +50,19 @@ def verify_qr_signature(payload: str, signature: str | None) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
-def hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+def _encode_qr_token(payload: dict) -> str:
+    token_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    return base64.urlsafe_b64encode(token_json.encode("utf-8")).decode("ascii").rstrip("=")
 
 
-def _qr_token_cache_key(token_hash: str) -> str:
-    return f"{QR_TOKEN_CACHE_PREFIX}:{token_hash}"
-
-
-def _store_ticket_qr_token(*, raw_token: str, ticket: Ticket) -> None:
-    token_hash = hash_token(raw_token)
-    cache.set(_qr_token_cache_key(token_hash), str(ticket.id), timeout=QR_TOKEN_TTL_SECONDS)
-
-
-def _consume_ticket_qr_token(raw_token: str):
-    token_hash = hash_token(raw_token)
-    cache_key = _qr_token_cache_key(token_hash)
-    ticket_id = cache.get(cache_key)
-    if ticket_id is None:
+def _decode_qr_token(raw_token: str) -> dict | None:
+    try:
+        padded_token = raw_token + "=" * (-len(raw_token) % 4)
+        decoded = base64.urlsafe_b64decode(padded_token.encode("ascii")).decode("utf-8")
+        token_payload = json.loads(decoded)
+    except (binascii.Error, UnicodeDecodeError, ValueError, json.JSONDecodeError):
         return None
-    cache.delete(cache_key)
-    return ticket_id
+    return token_payload if isinstance(token_payload, dict) else None
 
 
 def _validate_event_registration_window(event: Event) -> None:
@@ -200,7 +193,12 @@ def cancel_event_registration(*, registration: EventRegistration, reason: str | 
         EventRegistration.RegistrationStatus.REJECTED,
     }:
         raise ValidationError({"registration": "Registration is already cancelled."})
-
+    
+    if registration.status in {
+        EventRegistration.RegistrationStatus.CHECKED_IN,
+    }:
+        raise ValidationError({"registration": "Registration is already checked in."})
+    
     registration.status = EventRegistration.RegistrationStatus.CANCELLED
     registration.cancelled_at = timezone.now()
     registration.cancel_reason = reason or None
@@ -247,9 +245,15 @@ def issue_registration_qr(*, registration: EventRegistration):
         raise ValidationError({"ticket": "This ticket is not active."})
 
     now = timezone.now()
-    raw_token = secrets.token_urlsafe(24)
     valid_to = now + timedelta(seconds=QR_TOKEN_TTL_SECONDS)
-    _store_ticket_qr_token(raw_token=raw_token, ticket=ticket)
+    raw_token = _encode_qr_token(
+        {
+            "ticket_id": str(ticket.id),
+            "iat": int(now.timestamp()),
+            "exp": int(valid_to.timestamp()),
+            "nonce": secrets.token_urlsafe(8),
+        }
+    )
 
     qr_payload = build_qr_payload(raw_token)
     return {
@@ -268,8 +272,16 @@ def _resolve_ticket_from_payload(qr_payload: str, now):
     if qr_payload.startswith(QR_PAYLOAD_PREFIX):
         payload_value = qr_payload[len(QR_PAYLOAD_PREFIX) :]
 
-    ticket_id = _consume_ticket_qr_token(payload_value)
-    if ticket_id:
+    token_payload = _decode_qr_token(payload_value)
+    if token_payload:
+        expires_at = token_payload.get("exp")
+        ticket_id = token_payload.get("ticket_id")
+        if (
+            not isinstance(expires_at, int)
+            or not isinstance(ticket_id, str)
+            or expires_at <= int(now.timestamp())
+        ):
+            raise Ticket.DoesNotExist
         return Ticket.objects.select_for_update().select_related(
             "registration",
             "registration__event",
@@ -279,12 +291,24 @@ def _resolve_ticket_from_payload(qr_payload: str, now):
     return Ticket.lock_for_checkin(payload_value)
 
 
+def _resolve_ticket_from_email(*, event_id, email: str):
+    return Ticket.objects.select_for_update().select_related(
+        "registration",
+        "registration__event",
+        "registration__user",
+    ).get(
+        registration__event_id=event_id,
+        registration__user__email__iexact=email.strip(),
+    )
+
+
 def process_checkin_scan(
     *,
     event_id,
     ticket_code: str | None,
-    qr_payload: str | None,
-    qr_signature: str | None,
+    email: str | None = None,
+    qr_payload: str | None = None,
+    qr_signature: str | None = None,
     scanner_user=None,
     note: str | None = None,
 ):
@@ -304,8 +328,15 @@ def process_checkin_scan(
                 except Ticket.DoesNotExist:
                     ticket = None
         elif ticket_code:
+            normalized_code = ticket_code.strip()
+            if normalized_code:
+                try:
+                    ticket = Ticket.lock_for_checkin(normalized_code)
+                except Ticket.DoesNotExist:
+                    ticket = None
+        elif email:
             try:
-                ticket = Ticket.lock_for_checkin(ticket_code)
+                ticket = _resolve_ticket_from_email(event_id=event.id, email=email)
             except Ticket.DoesNotExist:
                 ticket = None
 
