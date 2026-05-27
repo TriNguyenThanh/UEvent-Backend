@@ -10,7 +10,7 @@ from django.urls import reverse
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.test import APIClient
 
-from apps.users.models import Role, UserAuthIdentity, UserRole
+from apps.users.models import PasskeyCredential, Role, UserAuthIdentity, UserRole
 from apps.users.services import KeycloakProvisioningService
 from common import otp as otp_service
 from common.authentication import KeycloakJWTAuthentication
@@ -764,6 +764,157 @@ class RepairKeycloakUsersCommandTests(TestCase):
             email_verified=True,
         )
         return user
+
+
+class PasskeyAuthApiTests(TestCase):
+    def setUp(self):
+        self.User = get_user_model()
+        self.user = self.User.objects.create_user(
+            username="passkey@example.com",
+            email="passkey@example.com",
+            full_name="Passkey User",
+        )
+        self.client = APIClient()
+
+    @patch("apps.users.passkey_views.PasskeyService.begin_registration")
+    def test_begin_passkey_registration_requires_auth_and_returns_options(
+        self,
+        mock_begin_registration,
+    ):
+        self.client.force_authenticate(user=self.user, token={"sub": "keycloak-id"})
+        mock_begin_registration.return_value = {
+            "challenge_id": "11111111-1111-1111-1111-111111111111",
+            "options": {"challenge": "abc", "rp": {"id": "localhost"}},
+        }
+
+        response = self.client.post(reverse("users:passkey-registration-options"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(
+            response.data["data"]["challenge_id"],
+            "11111111-1111-1111-1111-111111111111",
+        )
+        mock_begin_registration.assert_called_once_with(self.user)
+
+    @patch("apps.users.passkey_views.PasskeyService.verify_registration")
+    def test_verify_passkey_registration_returns_credential(
+        self,
+        mock_verify_registration,
+    ):
+        self.client.force_authenticate(user=self.user, token={"sub": "keycloak-id"})
+        credential = PasskeyCredential.objects.create(
+            user=self.user,
+            credential_id="credential-id",
+            public_key="public-key",
+            device_name="Pixel",
+        )
+        mock_verify_registration.return_value = credential
+
+        response = self.client.post(
+            reverse("users:passkey-registration-verify"),
+            {
+                "challenge_id": "11111111-1111-1111-1111-111111111111",
+                "credential": {"id": "credential-id", "response": {}},
+                "device_name": "Pixel",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["device_name"], "Pixel")
+        mock_verify_registration.assert_called_once()
+
+    def test_list_passkeys_only_returns_active_credentials(self):
+        self.client.force_authenticate(user=self.user, token={"sub": "keycloak-id"})
+        active = PasskeyCredential.objects.create(
+            user=self.user,
+            credential_id="active-credential",
+            public_key="public-key",
+            device_name="Pixel",
+        )
+        revoked = PasskeyCredential.objects.create(
+            user=self.user,
+            credential_id="revoked-credential",
+            public_key="public-key",
+            device_name="Old device",
+        )
+        revoked.revoke()
+
+        response = self.client.get(reverse("users:passkey-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["data"]), 1)
+        self.assertEqual(response.data["data"][0]["id"], str(active.id))
+
+    def test_revoke_passkey_marks_credential_revoked(self):
+        self.client.force_authenticate(user=self.user, token={"sub": "keycloak-id"})
+        credential = PasskeyCredential.objects.create(
+            user=self.user,
+            credential_id="active-credential",
+            public_key="public-key",
+        )
+
+        response = self.client.delete(
+            reverse("users:passkey-revoke", args=[credential.id]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        credential.refresh_from_db()
+        self.assertIsNotNone(credential.revoked_at)
+
+    @patch("apps.users.passkey_views.PasskeyService.begin_authentication")
+    def test_begin_passkey_authentication_is_public(self, mock_begin_authentication):
+        mock_begin_authentication.return_value = {
+            "challenge_id": "11111111-1111-1111-1111-111111111111",
+            "options": {"challenge": "abc"},
+        }
+
+        response = self.client.post(
+            reverse("users:passkey-authentication-options"),
+            {"email": "passkey@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["success"])
+        mock_begin_authentication.assert_called_once_with("passkey@example.com")
+
+    @patch("apps.users.passkey_views.PasskeyService.verify_authentication")
+    def test_verify_passkey_authentication_returns_tokens(self, mock_verify):
+        credential = PasskeyCredential.objects.create(
+            user=self.user,
+            credential_id="credential-id",
+            public_key="public-key",
+        )
+        mock_verify.return_value = type(
+            "PasskeyResult",
+            (),
+            {
+                "token_data": {
+                    "access_token": "access-token",
+                    "refresh_token": "refresh-token",
+                    "token_type": "Bearer",
+                    "expires_in": 300,
+                    "refresh_expires_in": 1800,
+                },
+                "user": self.user,
+                "credential": credential,
+            },
+        )()
+
+        response = self.client.post(
+            reverse("users:passkey-authentication-verify"),
+            {
+                "email": "passkey@example.com",
+                "challenge_id": "11111111-1111-1111-1111-111111111111",
+                "credential": {"id": "credential-id", "response": {}},
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["access_token"], "access-token")
 
 
 class _Response:

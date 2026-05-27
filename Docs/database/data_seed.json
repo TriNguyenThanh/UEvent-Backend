@@ -753,34 +753,6 @@
     }
   },
   {
-    "model": "registrations.ticketqrtoken",
-    "pk": "1b1b1b1b-1b1b-41b1-81b1-1b1b1b1b1b1b",
-    "fields": {
-      "created_at": "2026-04-17T09:04:00Z",
-      "updated_at": "2026-04-17T09:04:00Z",
-      "deleted_at": null,
-      "ticket": "1a1a1a1a-1a1a-41a1-81a1-1a1a1a1a1a1a",
-      "token_hash": "seed-token-hash-0001",
-      "issued_at": "2026-05-17T08:00:00Z",
-      "valid_from": "2026-05-17T08:00:00Z",
-      "valid_to": "2026-06-30T00:00:00Z"
-    }
-  },
-  {
-    "model": "registrations.ticketqrtoken",
-    "pk": "4aae2ced-e42d-4f77-adab-b56585382382",
-    "fields": {
-      "created_at": "2026-04-17T10:52:00Z",
-      "updated_at": "2026-04-17T10:52:00Z",
-      "deleted_at": null,
-      "ticket": "4220f716-6709-48c3-a202-94e70507fbb9",
-      "token_hash": "seed-token-hash-0002",
-      "issued_at": "2026-05-17T08:00:00Z",
-      "valid_from": "2026-05-17T08:00:00Z",
-      "valid_to": "2026-06-30T00:00:00Z"
-    }
-  },
-  {
     "model": "registrations.registrationcancellationrequest",
     "pk": "1c1c1c1c-1c1c-41c1-81c1-1c1c1c1c1c1c",
     "fields": {

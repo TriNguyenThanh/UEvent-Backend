@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Count, QuerySet
 from django.db.models.functions import TruncDate
 from django.utils import timezone
-from apps.users.models import User, Role, UserRole
+from apps.users.models import PasskeyCredential, User, Role, UserRole
 from common.exceptions import NotFoundError, ValidationError
 from .audit_service import AdminAuditService
 
@@ -164,6 +164,37 @@ class AdminUserService:
             return AdminUserService._users_with_related().get(pk=user_id)
         except User.DoesNotExist as exc:
             raise NotFoundError(f"User with ID {user_id} does not exist.") from exc
+
+    @staticmethod
+    def list_passkey_credentials(*, target_user_id):
+        user = AdminUserService.get_user(target_user_id)
+        return user.passkey_credentials.all().order_by("-created_at")
+
+    @staticmethod
+    @transaction.atomic
+    def revoke_passkey_credential(*, actor, target_user_id, credential_id):
+        user = AdminUserService.get_user(target_user_id)
+        try:
+            credential = PasskeyCredential.objects.select_for_update().get(
+                id=credential_id,
+                user=user,
+            )
+        except PasskeyCredential.DoesNotExist as exc:
+            raise NotFoundError("Passkey credential does not exist.") from exc
+
+        if credential.revoked_at is None:
+            credential.revoke()
+            AdminUserService._log_audit(
+                action="revoke_user_passkey",
+                actor=actor,
+                target_user_id=target_user_id,
+                metadata={
+                    "credential_id": str(credential.id),
+                    "device_name": credential.device_name,
+                    "device_type": credential.device_type,
+                },
+            )
+        return credential
 
     @staticmethod
     @transaction.atomic

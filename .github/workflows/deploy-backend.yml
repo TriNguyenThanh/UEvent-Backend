@@ -29,26 +29,71 @@ jobs:
           ENV_FILE_PATH="${BACKEND_ENV_FILE_PATH:-/opt/uevent/backend/.env}"
           FIREBASE_FILE_PATH="${FIREBASE_SERVICE_ACCOUNT_PATH:-/opt/uevent/backend/firebase-service-account.json}"
 
+          copy_private_file() {
+            source_path="$1"
+            target_path="$2"
+
+            if [ -r "$source_path" ]; then
+              install -m 600 "$source_path" "$target_path"
+              return
+            fi
+
+            if sudo -n true 2>/dev/null; then
+              sudo install -m 600 -o "$(id -u)" -g "$(id -g)" "$source_path" "$target_path"
+              return
+            fi
+
+            echo "::error::Runner user cannot read $source_path. Grant read permission or allow passwordless sudo."
+            exit 1
+          }
+
           if [ ! -f "$ENV_FILE_PATH" ]; then
             echo "::error::Missing backend env file on EC2: $ENV_FILE_PATH"
             exit 1
           fi
 
-          install -m 600 "$ENV_FILE_PATH" .env
+          copy_private_file "$ENV_FILE_PATH" .env
 
           if [ -f "$FIREBASE_FILE_PATH" ]; then
-            install -m 600 "$FIREBASE_FILE_PATH" firebase-service-account.json
+            copy_private_file "$FIREBASE_FILE_PATH" firebase-service-account.json
           else
             printf '{}\n' > firebase-service-account.json
             chmod 600 firebase-service-account.json
+          fi
+
+      - name: Check Docker
+        run: |
+          set -euo pipefail
+
+          if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            DOCKER="docker"
+          elif command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+            DOCKER="sudo docker"
+          else
+            echo "::error::Docker is not installed or the runner user cannot access it. Install Docker, add the runner user to the docker group, or allow passwordless sudo for docker."
+            exit 1
+          fi
+
+          if ! $DOCKER compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
+            echo "::error::Docker Compose not found. Install the Docker Compose plugin or docker-compose."
+            exit 1
           fi
 
       - name: Deploy with Docker Compose
         run: |
           set -euo pipefail
 
-          if docker compose version >/dev/null 2>&1; then
-            COMPOSE="docker compose"
+          if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            DOCKER="docker"
+          elif command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+            DOCKER="sudo docker"
+          else
+            echo "::error::Runner user cannot access Docker. Add it to the docker group or allow passwordless sudo for docker."
+            exit 1
+          fi
+
+          if $DOCKER compose version >/dev/null 2>&1; then
+            COMPOSE="$DOCKER compose"
           else
             COMPOSE="docker-compose"
           fi
@@ -58,4 +103,9 @@ jobs:
 
       - name: Cleanup Docker images
         if: always()
-        run: docker image prune -f
+        run: |
+          if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            docker image prune -f
+          elif command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+            sudo docker image prune -f
+          fi
