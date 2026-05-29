@@ -7,6 +7,16 @@ from .role import Role
 from .user_role import UserRole
 from .user_auth_identity import UserAuthIdentity
 from .user_session import UserSession
+from .passkey_challenge import PasskeyChallenge
+from .passkey_credential import PasskeyCredential
 
 
-__all__ = ['User', 'Role', 'UserRole', 'UserAuthIdentity', 'UserSession']
+__all__ = [
+    'User',
+    'Role',
+    'UserRole',
+    'UserAuthIdentity',
+    'UserSession',
+    'PasskeyChallenge',
+    'PasskeyCredential',
+]

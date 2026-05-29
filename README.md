@@ -89,6 +89,7 @@ The project follows a **Hybrid (Feature-first) Monolithic Architecture**. This a
 4.  **Migrate & Seed**
 
     ```bash
+    python manage.py makemigrations app_settings events interactions locations moderation notifications registrations support system_admin users
     python manage.py migrate
     python manage.py loaddata seed_data.json
     ```
