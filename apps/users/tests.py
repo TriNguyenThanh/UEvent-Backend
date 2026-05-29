@@ -905,7 +905,7 @@ class PasskeyAuthApiTests(TestCase):
         PASSKEY_RP_NAME="UEvent",
         PASSKEY_CHALLENGE_TTL_SECONDS=300,
     )
-    def test_begin_passkey_authentication_without_email_omits_allow_credentials(self):
+    def test_begin_passkey_authentication_without_email_returns_empty_allow_credentials(self):
         PasskeyCredential.objects.create(
             user=self.user,
             credential_id="AQIDBA",
@@ -920,7 +920,7 @@ class PasskeyAuthApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("allowCredentials", response.data["data"]["options"])
+        self.assertEqual(response.data["data"]["options"]["allowCredentials"], [])
 
     @patch("apps.users.passkey_views.PasskeyService.verify_authentication")
     def test_verify_passkey_authentication_returns_tokens(self, mock_verify):
