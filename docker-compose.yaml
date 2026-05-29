@@ -23,7 +23,6 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
       - app_logs:/app/logs
       - ./firebase-service-account.json:/run/firebase-service-account.json:ro
     depends_on:
@@ -80,7 +79,6 @@ services:
           sleep "$${NOTIFICATION_SCHEDULER_INTERVAL_SECONDS:-60}"
         done
     volumes:
-      - .:/app
       - app_logs:/app/logs
     depends_on:
       db:
@@ -109,7 +107,6 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
     command: ["celery", "-A", "core", "worker", "--loglevel=INFO"]
     volumes:
-      - .:/app
       - app_logs:/app/logs
       - ./firebase-service-account.json:/run/firebase-service-account.json:ro
     depends_on:
