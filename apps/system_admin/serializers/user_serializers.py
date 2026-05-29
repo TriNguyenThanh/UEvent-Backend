@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from apps.system_admin.models import ExportJob
-from apps.users.models import User, Role, UserRole, UserSession
+from apps.users.models import PasskeyCredential, User, Role, UserRole, UserSession
 from apps.system_admin.services.user_export_service import AdminUserExportService
 
 
@@ -28,6 +28,26 @@ class AdminUserSessionOutputSerializer(serializers.ModelSerializer):
             'expires_at', 'revoked_at', 'created_at', 'updated_at'
         ]
 
+
+class AdminPasskeyCredentialOutputSerializer(serializers.ModelSerializer):
+    is_active = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = PasskeyCredential
+        fields = [
+            "id",
+            "device_name",
+            "device_type",
+            "backed_up",
+            "transports",
+            "sign_count",
+            "is_active",
+            "created_at",
+            "last_used_at",
+            "revoked_at",
+        ]
+
+
 class AdminUserListOutputSerializer(serializers.ModelSerializer):
     user_roles = AdminUserRoleOutputSerializer(many=True, read_only=True)
     sessions = AdminUserSessionOutputSerializer(many=True, read_only=True)
@@ -43,6 +63,7 @@ class AdminUserListOutputSerializer(serializers.ModelSerializer):
 class AdminUserDetailOutputSerializer(serializers.ModelSerializer):
     user_roles = AdminUserRoleOutputSerializer(many=True, read_only=True)
     sessions = AdminUserSessionOutputSerializer(many=True, read_only=True)
+    passkey_credentials = AdminPasskeyCredentialOutputSerializer(many=True, read_only=True)
 
     
     class Meta:
@@ -51,7 +72,8 @@ class AdminUserDetailOutputSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'full_name', 'student_code',
             'faculty', 'class_name', 'account_status', 'is_active',
             'phone_number', 'avatar_url', 'deleted_at',
-            'created_at', 'updated_at', 'user_roles', 'sessions'
+            'created_at', 'updated_at', 'user_roles', 'sessions',
+            'passkey_credentials',
         ]
 
 class AdminCreateUserInputSerializer(serializers.ModelSerializer):

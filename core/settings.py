@@ -169,6 +169,17 @@ KEYCLOAK_ADMIN_CLIENT_SECRET = env("KEYCLOAK_ADMIN_CLIENT_SECRET", default="")
 KEYCLOAK_TOKEN_URL = f"{KEYCLOAK_ISSUER}/protocol/openid-connect/token"
 KEYCLOAK_ADMIN_API_URL = f"{KEYCLOAK_SERVER_URL}/admin/realms/{KEYCLOAK_REALM}"
 
+PASSKEY_RP_ID = env("PASSKEY_RP_ID", default="localhost")
+PASSKEY_RP_NAME = env("PASSKEY_RP_NAME", default="UEvent")
+PASSKEY_EXPECTED_ORIGINS = env.list(
+    "PASSKEY_EXPECTED_ORIGINS",
+    default=["http://localhost", "https://localhost"],
+)
+PASSKEY_CHALLENGE_TTL_SECONDS = env.int(
+    "PASSKEY_CHALLENGE_TTL_SECONDS",
+    default=300,
+)
+
 GOOGLE_OAUTH_CLIENT_IDS = env.list("GOOGLE_OAUTH_CLIENT_IDS", default=[])
 
 REST_FRAMEWORK = {

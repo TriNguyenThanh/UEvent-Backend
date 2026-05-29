@@ -24,6 +24,7 @@ from ..serializers.user_serializers import (
     AdminBanUserInputSerializer,
     AdminCreateUserInputSerializer,
     AdminExportJobOutputSerializer,
+    AdminPasskeyCredentialOutputSerializer,
     AdminUnbanUserInputSerializer,
     AdminUpdateUserInputSerializer,
     AdminUserDetailOutputSerializer,
@@ -146,6 +147,32 @@ class AdminUserDetailUpdateDeleteView(APIView):
             reason=request.data.get('reason', '')
         )
         return deleted_response(message="Xóa mềm người dùng thành công.")
+
+
+class AdminUserPasskeyListView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
+
+    def get(self, request, pk):
+        credentials = AdminUserService.list_passkey_credentials(target_user_id=pk)
+        return success_response(
+            data=AdminPasskeyCredentialOutputSerializer(
+                credentials,
+                many=True,
+            ).data,
+            message="Lấy danh sách passkey của người dùng thành công.",
+        )
+
+
+class AdminUserPasskeyRevokeView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
+
+    def delete(self, request, pk, credential_id):
+        AdminUserService.revoke_passkey_credential(
+            actor=request.user,
+            target_user_id=pk,
+            credential_id=credential_id,
+        )
+        return deleted_response(message="Đã thu hồi passkey của người dùng.")
 
 
 class AdminBanUserView(APIView):

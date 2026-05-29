@@ -5,7 +5,7 @@ from rest_framework.test import APIClient
 
 from apps.system_admin.models import ExportJob
 from apps.system_admin.services.user_export_service import AdminUserExportService
-from apps.users.models import Role, UserRole
+from apps.users.models import PasskeyCredential, Role, UserRole
 from common.response_codes import ResponseCode
 from common.responses import build_api_response
 
@@ -137,6 +137,46 @@ class AdminApiResponseContractTests(TestCase):
         self.assertEqual(response.data["data"]["email"], "created_contract@example.com")
         self.assertEqual(response.data["data"]["student_code"], "SC_CREATED_001")
         self.assertEqual(response.data["data"]["user_roles"][0]["role"]["code"], self.role.code)
+
+    def test_admin_can_list_and_revoke_user_passkeys(self):
+        self.authenticate_admin()
+        credential = PasskeyCredential.objects.create(
+            user=self.target_user,
+            credential_id="admin-passkey-contract",
+            public_key="public-key",
+            sign_count=3,
+            transports=["internal"],
+            device_name="Pixel 9",
+            device_type="platform",
+            backed_up=True,
+        )
+
+        list_response = self.client.get(
+            reverse("system_admin:user-passkey-list", kwargs={"pk": self.target_user.id})
+        )
+
+        self.assert_success_envelope(
+            list_response,
+            expected_message="Lấy danh sách passkey của người dùng thành công.",
+            data_type=list,
+        )
+        self.assertEqual(list_response.data["data"][0]["id"], str(credential.id))
+        self.assertTrue(list_response.data["data"][0]["is_active"])
+
+        revoke_response = self.client.delete(
+            reverse(
+                "system_admin:user-passkey-revoke",
+                kwargs={"pk": self.target_user.id, "credential_id": credential.id},
+            )
+        )
+
+        self.assert_success_envelope(
+            revoke_response,
+            expected_code=ResponseCode.DELETED.value,
+            expected_message="Đã thu hồi passkey của người dùng.",
+        )
+        credential.refresh_from_db()
+        self.assertIsNotNone(credential.revoked_at)
 
     def test_admin_create_user_legacy_route_still_uses_created_response_envelope(self):
         self.authenticate_admin()

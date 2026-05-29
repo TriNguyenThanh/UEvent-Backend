@@ -25,26 +25,26 @@ class SettingDefinition:
 
 class AdminSettingsService:
     GROUPS = [
-        {
-            "id": "appearance",
-            "label": "Giao diện",
-            "description": "Thiết lập trải nghiệm hiển thị trong trang quản trị.",
-        },
-        {
-            "id": "audit",
-            "label": "Kiểm toán",
-            "description": "Thiết lập cảnh báo và quy tắc theo dõi nhật ký quản trị.",
-        },
-        {
-            "id": "security",
-            "label": "Bảo mật",
-            "description": "Thiết lập vận hành an toàn cho cổng quản trị.",
-        },
-        {
-            "id": "notifications",
-            "label": "Thông báo",
-            "description": "Thiết lập gửi thông báo và lịch gửi tự động.",
-        },
+        # {
+        #     "id": "appearance",
+        #     "label": "Giao diện",
+        #     "description": "Thiết lập trải nghiệm hiển thị trong trang quản trị.",
+        # },
+        # {
+        #     "id": "audit",
+        #     "label": "Kiểm toán",
+        #     "description": "Thiết lập cảnh báo và quy tắc theo dõi nhật ký quản trị.",
+        # },
+        # {
+        #     "id": "security",
+        #     "label": "Bảo mật",
+        #     "description": "Thiết lập vận hành an toàn cho cổng quản trị.",
+        # },
+        # {
+        #     "id": "notifications",
+        #     "label": "Thông báo",
+        #     "description": "Thiết lập gửi thông báo và lịch gửi tự động.",
+        # },
         {
             "id": "registration",
             "label": "Đăng ký sự kiện",

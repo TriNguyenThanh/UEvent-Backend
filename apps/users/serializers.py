@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.users.models import User
+from apps.users.models import PasskeyCredential, User
 
 
 class UserProfileOutputSerializer(serializers.ModelSerializer):
@@ -71,3 +71,48 @@ class ChangeEmailInputSerializer(serializers.Serializer):
     new_email = serializers.EmailField()
     current_otp_code = serializers.CharField(min_length=6, max_length=6)
     new_email_otp_code = serializers.CharField(min_length=6, max_length=6)
+
+
+class PasskeyRegistrationOptionsOutputSerializer(serializers.Serializer):
+    challenge_id = serializers.UUIDField()
+    options = serializers.JSONField()
+
+
+class PasskeyRegistrationVerifyInputSerializer(serializers.Serializer):
+    challenge_id = serializers.UUIDField()
+    credential = serializers.JSONField()
+    device_name = serializers.CharField(
+        max_length=120,
+        required=False,
+        allow_blank=True,
+    )
+
+
+class PasskeyCredentialOutputSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PasskeyCredential
+        fields = [
+            "id",
+            "device_name",
+            "device_type",
+            "backed_up",
+            "transports",
+            "created_at",
+            "last_used_at",
+            "revoked_at",
+        ]
+
+
+class PasskeyAuthenticationOptionsInputSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=False, allow_blank=True)
+
+
+class PasskeyAuthenticationOptionsOutputSerializer(serializers.Serializer):
+    challenge_id = serializers.UUIDField()
+    options = serializers.JSONField()
+
+
+class PasskeyAuthenticationVerifyInputSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=False, allow_blank=True)
+    challenge_id = serializers.UUIDField()
+    credential = serializers.JSONField()

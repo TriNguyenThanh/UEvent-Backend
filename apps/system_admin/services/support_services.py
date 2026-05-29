@@ -6,7 +6,14 @@ from django.db.models import Count, Prefetch, Q, QuerySet
 from django.utils import timezone
 
 from apps.events.models import Event
-from apps.support.models import SupportMessage, SupportTicket
+from apps.support.models import (
+    LegalDocument,
+    SupportArticle,
+    SupportCategory,
+    SupportMessage,
+    SupportTicket,
+)
+from apps.support.services import HelpCenterService, LegalDocumentService
 from common.exceptions import NotFoundError, ValidationError
 
 from .audit_service import AdminAuditService
@@ -24,7 +31,9 @@ class AdminSupportService:
     def _tickets_with_related() -> QuerySet[SupportTicket]:
         message_prefetch = Prefetch(
             "messages",
-            queryset=SupportMessage.objects.select_related("author_user").order_by("created_at"),
+            queryset=SupportMessage.objects.select_related("author_user").order_by(
+                "created_at"
+            ),
             to_attr="prefetched_messages",
         )
         return (
@@ -69,9 +78,13 @@ class AdminSupportService:
         try:
             ticket = AdminSupportService._tickets_with_related().get(pk=ticket_id)
         except SupportTicket.DoesNotExist as exc:
-            raise NotFoundError(f"Support ticket with ID {ticket_id} does not exist.") from exc
+            raise NotFoundError(
+                f"Support ticket with ID {ticket_id} does not exist."
+            ) from exc
 
-        ticket.user_ticket_count = SupportTicket.objects.filter(user=ticket.user).count()
+        ticket.user_ticket_count = SupportTicket.objects.filter(
+            user=ticket.user
+        ).count()
         ticket.user_event_count = Event.objects.filter(created_by=ticket.user).count()
         return ticket
 
@@ -86,15 +99,28 @@ class AdminSupportService:
 
         response_minutes = []
         for ticket in tickets.prefetch_related("messages")[:500]:
-            first_staff_message = next((message for message in ticket.messages.all() if message.is_staff), None)
+            first_staff_message = next(
+                (message for message in ticket.messages.all() if message.is_staff), None
+            )
             if first_staff_message:
-                response_minutes.append((first_staff_message.created_at - ticket.created_at).total_seconds() / 60)
+                response_minutes.append(
+                    (first_staff_message.created_at - ticket.created_at).total_seconds()
+                    / 60
+                )
 
-        avg_response_minutes = round(sum(response_minutes) / len(response_minutes), 1) if response_minutes else 0.0
+        avg_response_minutes = (
+            round(sum(response_minutes) / len(response_minutes), 1)
+            if response_minutes
+            else 0.0
+        )
 
         return {
-            "open_tickets": tickets.filter(status=SupportTicket.TicketStatus.OPEN).count(),
-            "in_progress": tickets.filter(status=SupportTicket.TicketStatus.IN_PROGRESS).count(),
+            "open_tickets": tickets.filter(
+                status=SupportTicket.TicketStatus.OPEN
+            ).count(),
+            "in_progress": tickets.filter(
+                status=SupportTicket.TicketStatus.IN_PROGRESS
+            ).count(),
             "resolved_today": resolved_today,
             "avg_response_minutes": avg_response_minutes,
         }
@@ -106,9 +132,13 @@ class AdminSupportService:
 
         user_model = get_user_model()
         try:
-            return user_model.objects.get(Q(is_staff=True) | Q(is_superuser=True), pk=user_id)
+            return user_model.objects.get(
+                Q(is_staff=True) | Q(is_superuser=True), pk=user_id
+            )
         except user_model.DoesNotExist as exc:
-            raise ValidationError("Người được gán ticket phải là nhân sự quản trị hoặc quản trị viên.") from exc
+            raise ValidationError(
+                "Người được gán ticket phải là nhân sự quản trị hoặc quản trị viên."
+            ) from exc
 
     @staticmethod
     @transaction.atomic
@@ -116,12 +146,16 @@ class AdminSupportService:
         try:
             ticket = SupportTicket.objects.select_for_update().get(pk=ticket_id)
         except SupportTicket.DoesNotExist as exc:
-            raise NotFoundError(f"Support ticket with ID {ticket_id} does not exist.") from exc
+            raise NotFoundError(
+                f"Support ticket with ID {ticket_id} does not exist."
+            ) from exc
 
         previous = {
             "status": ticket.status,
             "priority": ticket.priority,
-            "assigned_to": str(ticket.assigned_to_id) if ticket.assigned_to_id else None,
+            "assigned_to": (
+                str(ticket.assigned_to_id) if ticket.assigned_to_id else None
+            ),
         }
 
         if "status" in data:
@@ -131,12 +165,12 @@ class AdminSupportService:
             ticket.priority = data["priority"]
 
         if "assigned_to" in data:
-            ticket.assigned_to = AdminSupportService._get_valid_assignee(data["assigned_to"])
+            ticket.assigned_to = AdminSupportService._get_valid_assignee(
+                data["assigned_to"]
+            )
 
         changed_fields = [
-            field
-            for field in ["status", "priority", "assigned_to"]
-            if field in data
+            field for field in ["status", "priority", "assigned_to"] if field in data
         ]
         if changed_fields:
             ticket.save(update_fields=[*changed_fields, "updated_at"])
@@ -158,7 +192,9 @@ class AdminSupportService:
         try:
             ticket = SupportTicket.objects.select_for_update().get(pk=ticket_id)
         except SupportTicket.DoesNotExist as exc:
-            raise NotFoundError(f"Support ticket with ID {ticket_id} does not exist.") from exc
+            raise NotFoundError(
+                f"Support ticket with ID {ticket_id} does not exist."
+            ) from exc
 
         SupportMessage.objects.create(
             ticket=ticket,
@@ -192,7 +228,9 @@ class AdminSupportService:
         try:
             ticket = SupportTicket.objects.select_for_update().get(pk=ticket_id)
         except SupportTicket.DoesNotExist as exc:
-            raise NotFoundError(f"Support ticket with ID {ticket_id} does not exist.") from exc
+            raise NotFoundError(
+                f"Support ticket with ID {ticket_id} does not exist."
+            ) from exc
 
         previous_status = ticket.status
         ticket.status = SupportTicket.TicketStatus.RESOLVED
@@ -221,11 +259,17 @@ class AdminSupportService:
         try:
             ticket = SupportTicket.objects.select_for_update().get(pk=ticket_id)
         except SupportTicket.DoesNotExist as exc:
-            raise NotFoundError(f"Support ticket with ID {ticket_id} does not exist.") from exc
+            raise NotFoundError(
+                f"Support ticket with ID {ticket_id} does not exist."
+            ) from exc
 
         previous_priority = ticket.priority
-        current_index = AdminSupportService.PRIORITY_ESCALATION_ORDER.index(ticket.priority)
-        next_index = min(current_index + 1, len(AdminSupportService.PRIORITY_ESCALATION_ORDER) - 1)
+        current_index = AdminSupportService.PRIORITY_ESCALATION_ORDER.index(
+            ticket.priority
+        )
+        next_index = min(
+            current_index + 1, len(AdminSupportService.PRIORITY_ESCALATION_ORDER) - 1
+        )
         ticket.priority = AdminSupportService.PRIORITY_ESCALATION_ORDER[next_index]
         if ticket.status == SupportTicket.TicketStatus.OPEN:
             ticket.status = SupportTicket.TicketStatus.IN_PROGRESS
@@ -243,3 +287,149 @@ class AdminSupportService:
             },
         )
         return AdminSupportService.get_ticket(ticket_id)
+
+    @staticmethod
+    def list_help_center_categories() -> QuerySet[SupportCategory]:
+        return SupportCategory.objects.all().order_by("sort_order", "name")
+
+    @staticmethod
+    def list_help_center_articles(
+        *,
+        status: str | None = None,
+        locale: str | None = None,
+        category: str | None = None,
+    ) -> QuerySet[SupportArticle]:
+        queryset = SupportArticle.objects.select_related("category")
+
+        if status:
+            queryset = queryset.filter(status=status)
+        if locale:
+            queryset = queryset.filter(locale=locale)
+        if category:
+            queryset = queryset.filter(category__slug=category)
+
+        return queryset.order_by("category__sort_order", "sort_order", "title")
+
+    @staticmethod
+    def log_help_center_action(*, action, actor, target, metadata=None):
+        AdminAuditService.log_action(
+            action=action,
+            actor=actor,
+            target_type=f"support.{target.__class__.__name__}",
+            target_id=str(target.pk),
+            metadata=metadata,
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def publish_help_center_article(*, actor, article_id) -> SupportArticle:
+        try:
+            article = SupportArticle.objects.select_for_update().get(pk=article_id)
+        except SupportArticle.DoesNotExist as exc:
+            raise NotFoundError(
+                f"Support article with ID {article_id} does not exist."
+            ) from exc
+
+        previous_status = article.status
+        article = HelpCenterService.publish_article(article)
+        AdminSupportService.log_help_center_action(
+            action="publish_support_article",
+            actor=actor,
+            target=article,
+            metadata={"previous_status": previous_status, "new_status": article.status},
+        )
+        return article
+
+    @staticmethod
+    @transaction.atomic
+    def archive_help_center_article(*, actor, article_id) -> SupportArticle:
+        try:
+            article = SupportArticle.objects.select_for_update().get(pk=article_id)
+        except SupportArticle.DoesNotExist as exc:
+            raise NotFoundError(
+                f"Support article with ID {article_id} does not exist."
+            ) from exc
+
+        previous_status = article.status
+        article = HelpCenterService.archive_article(article)
+        AdminSupportService.log_help_center_action(
+            action="archive_support_article",
+            actor=actor,
+            target=article,
+            metadata={"previous_status": previous_status, "new_status": article.status},
+        )
+        return article
+
+    @staticmethod
+    def list_legal_documents(
+        *,
+        document_type: str | None = None,
+        status: str | None = None,
+        locale: str | None = None,
+    ) -> QuerySet[LegalDocument]:
+        queryset = LegalDocument.objects.all()
+
+        if document_type:
+            queryset = queryset.filter(document_type=document_type)
+        if status:
+            queryset = queryset.filter(status=status)
+        if locale:
+            queryset = queryset.filter(locale=locale)
+
+        return queryset.order_by("document_type", "locale", "-updated_at")
+
+    @staticmethod
+    def log_legal_document_action(*, action, actor, target, metadata=None):
+        AdminAuditService.log_action(
+            action=action,
+            actor=actor,
+            target_type="support.LegalDocument",
+            target_id=str(target.pk),
+            metadata=metadata,
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def publish_legal_document(*, actor, document_id) -> LegalDocument:
+        try:
+            document = LegalDocument.objects.select_for_update().get(pk=document_id)
+        except LegalDocument.DoesNotExist as exc:
+            raise NotFoundError(
+                f"Legal document with ID {document_id} does not exist."
+            ) from exc
+
+        previous_status = document.status
+        document = LegalDocumentService.publish(document)
+        AdminSupportService.log_legal_document_action(
+            action="publish_legal_document",
+            actor=actor,
+            target=document,
+            metadata={
+                "previous_status": previous_status,
+                "new_status": document.status,
+            },
+        )
+        return document
+
+    @staticmethod
+    @transaction.atomic
+    def archive_legal_document(*, actor, document_id) -> LegalDocument:
+        try:
+            document = LegalDocument.objects.select_for_update().get(pk=document_id)
+        except LegalDocument.DoesNotExist as exc:
+            raise NotFoundError(
+                f"Legal document with ID {document_id} does not exist."
+            ) from exc
+
+        previous_status = document.status
+        document = LegalDocumentService.archive(document)
+        AdminSupportService.log_legal_document_action(
+            action="archive_legal_document",
+            actor=actor,
+            target=document,
+            metadata={
+                "previous_status": previous_status,
+                "new_status": document.status,
+            },
+        )
+        return document
