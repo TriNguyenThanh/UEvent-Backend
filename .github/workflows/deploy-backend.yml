@@ -19,8 +19,28 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Prepare runner workspace
+        run: |
+          set -euo pipefail
+
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+              sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
+              sudo find "$GITHUB_WORKSPACE" -type d -name "__pycache__" -prune -exec rm -rf {} +
+              sudo find "$GITHUB_WORKSPACE" -type f -name "*.pyc" -delete
+              sudo rm -rf "$GITHUB_WORKSPACE/logs"
+            else
+              chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" 2>/dev/null || true
+              find "$GITHUB_WORKSPACE" -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
+              find "$GITHUB_WORKSPACE" -type f -name "*.pyc" -delete 2>/dev/null || true
+              rm -rf "$GITHUB_WORKSPACE/logs" 2>/dev/null || true
+            fi
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Load EC2 environment files
         run: |
@@ -65,12 +85,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          if ! command -v docker >/dev/null 2>&1; then
-            echo "::error::docker command not found. Install Docker on the EC2 runner and add the runner user to the docker group."
+          if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            DOCKER="docker"
+          elif command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+            DOCKER="sudo docker"
+          else
+            echo "::error::Docker is not installed or the runner user cannot access it. Add the runner user to the docker group or allow passwordless sudo for docker."
             exit 1
           fi
 
-          if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
+          if ! $DOCKER compose version >/dev/null 2>&1 \
+            && ! docker-compose version >/dev/null 2>&1 \
+            && ! sudo -n docker-compose version >/dev/null 2>&1; then
             echo "::error::Docker Compose not found. Install the Docker Compose plugin or docker-compose."
             exit 1
           fi
@@ -79,18 +105,37 @@ jobs:
         run: |
           set -euo pipefail
 
-          if docker compose version >/dev/null 2>&1; then
-            COMPOSE="docker compose"
+          if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            DOCKER="docker"
+          elif command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+            DOCKER="sudo docker"
           else
-            COMPOSE="docker-compose"
+            echo "::error::Runner user cannot access Docker. Add it to the docker group or allow passwordless sudo for docker."
+            exit 1
           fi
 
-          $COMPOSE up -d --build --remove-orphans
+          if $DOCKER compose version >/dev/null 2>&1; then
+            COMPOSE="$DOCKER compose"
+          elif command -v docker-compose >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            COMPOSE="docker-compose"
+          elif command -v sudo >/dev/null 2>&1 && sudo -n docker-compose version >/dev/null 2>&1; then
+            COMPOSE="sudo docker-compose"
+          else
+            echo "::error::Docker Compose not found or cannot access Docker."
+            exit 1
+          fi
+
+          $COMPOSE build
+          $COMPOSE up -d db redis jaeger openobserve
+          $COMPOSE run --rm app python manage.py migrate --noinput
+          $COMPOSE up -d --remove-orphans
           $COMPOSE ps
 
       - name: Cleanup Docker images
         if: always()
         run: |
-          if command -v docker >/dev/null 2>&1; then
+          if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
             docker image prune -f
+          elif command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+            sudo docker image prune -f
           fi
