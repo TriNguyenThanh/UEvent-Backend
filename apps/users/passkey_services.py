@@ -47,9 +47,15 @@ class PasskeyService:
             user_id=str(user.id).encode("utf-8"),
             user_name=user.email or user.username,
             user_display_name=user.full_name or user.email or user.username,
+            authenticator_selection=structs.AuthenticatorSelectionCriteria(
+                resident_key=structs.ResidentKeyRequirement.REQUIRED,
+                require_resident_key=True,
+                user_verification=structs.UserVerificationRequirement.PREFERRED,
+            ),
             exclude_credentials=[
                 structs.PublicKeyCredentialDescriptor(
                     id=webauthn.base64url_to_bytes(item.credential_id),
+                    transports=_credential_transports(item, structs),
                 )
                 for item in active_credentials
             ],
@@ -116,27 +122,30 @@ class PasskeyService:
         return passkey
 
     @staticmethod
-    def begin_authentication(email: str) -> dict[str, Any]:
+    def begin_authentication(email: str = "") -> dict[str, Any]:
         webauthn = _load_webauthn()
         structs = _load_webauthn_structs()
 
         normalized_email = email.strip().lower()
-        user = User.objects.filter(email__iexact=normalized_email).first()
-        credentials = PasskeyCredential.objects.none()
-        if user is not None:
+        user = None
+        allow_credentials = None
+        if normalized_email:
+            user = User.objects.filter(email__iexact=normalized_email).first()
             credentials = PasskeyCredential.objects.filter(
                 user=user,
                 revoked_at__isnull=True,
             )
+            allow_credentials = [
+                structs.PublicKeyCredentialDescriptor(
+                    id=webauthn.base64url_to_bytes(item.credential_id),
+                    transports=_credential_transports(item, structs),
+                )
+                for item in credentials
+            ]
 
         options = webauthn.generate_authentication_options(
             rp_id=settings.PASSKEY_RP_ID,
-            allow_credentials=[
-                structs.PublicKeyCredentialDescriptor(
-                    id=webauthn.base64url_to_bytes(item.credential_id),
-                )
-                for item in credentials
-            ],
+            allow_credentials=allow_credentials,
         )
         options_payload = json.loads(webauthn.options_to_json(options))
         challenge = PasskeyService._create_challenge(
@@ -151,9 +160,9 @@ class PasskeyService:
     @transaction.atomic
     def verify_authentication(
         *,
-        email: str,
         challenge_id: str,
         credential: dict[str, Any],
+        email: str = "",
     ) -> PasskeyTokenResult:
         webauthn = _load_webauthn()
         normalized_email = email.strip().lower()
@@ -163,14 +172,17 @@ class PasskeyService:
             email=normalized_email,
         )
         credential_id = credential.get("id") or credential.get("rawId")
+        filters = {
+            "credential_id": credential_id,
+            "revoked_at__isnull": True,
+        }
+        if normalized_email:
+            filters["user__email__iexact"] = normalized_email
+
         passkey = (
             PasskeyCredential.objects.select_related("user")
             .select_for_update()
-            .filter(
-                credential_id=credential_id,
-                user__email__iexact=normalized_email,
-                revoked_at__isnull=True,
-            )
+            .filter(**filters)
             .first()
         )
         if passkey is None:
@@ -312,3 +324,14 @@ def _bytes_to_base64url(value: bytes) -> str:
 def _base64url_to_bytes(value: str) -> bytes:
     padding = "=" * (-len(value) % 4)
     return base64.urlsafe_b64decode(f"{value}{padding}".encode("ascii"))
+
+
+def _credential_transports(credential: PasskeyCredential, structs) -> list[Any] | None:
+    values = credential.transports if isinstance(credential.transports, list) else []
+    transports = []
+    for value in values:
+        try:
+            transports.append(structs.AuthenticatorTransport(value))
+        except (TypeError, ValueError):
+            continue
+    return transports or None

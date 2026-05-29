@@ -148,7 +148,7 @@ class PasskeyAuthenticationOptionsView(APIView):
 
         try:
             payload = PasskeyService.begin_authentication(
-                serializer.validated_data["email"],
+                serializer.validated_data.get("email", ""),
             )
         except PasskeyConfigurationError as exc:
             return error_response(
@@ -179,9 +179,9 @@ class PasskeyAuthenticationVerifyView(APIView):
 
         try:
             result = PasskeyService.verify_authentication(
-                email=serializer.validated_data["email"],
                 challenge_id=str(serializer.validated_data["challenge_id"]),
                 credential=serializer.validated_data["credential"],
+                email=serializer.validated_data.get("email", ""),
             )
         except ValidationError as exc:
             return error_response(

@@ -104,7 +104,7 @@ class PasskeyCredentialOutputSerializer(serializers.ModelSerializer):
 
 
 class PasskeyAuthenticationOptionsInputSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False, allow_blank=True)
 
 
 class PasskeyAuthenticationOptionsOutputSerializer(serializers.Serializer):
@@ -113,6 +113,6 @@ class PasskeyAuthenticationOptionsOutputSerializer(serializers.Serializer):
 
 
 class PasskeyAuthenticationVerifyInputSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False, allow_blank=True)
     challenge_id = serializers.UUIDField()
     credential = serializers.JSONField()

@@ -11,6 +11,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.test import APIClient
 
 from apps.users.models import PasskeyCredential, Role, UserAuthIdentity, UserRole
+from apps.users.passkey_services import PasskeyService
 from apps.users.services import KeycloakProvisioningService
 from common import otp as otp_service
 from common.authentication import KeycloakJWTAuthentication
@@ -880,6 +881,47 @@ class PasskeyAuthApiTests(TestCase):
         self.assertTrue(response.data["success"])
         mock_begin_authentication.assert_called_once_with("passkey@example.com")
 
+    @override_settings(
+        PASSKEY_RP_ID="localhost",
+        PASSKEY_RP_NAME="UEvent",
+        PASSKEY_CHALLENGE_TTL_SECONDS=300,
+    )
+    def test_begin_passkey_authentication_includes_saved_transports(self):
+        PasskeyCredential.objects.create(
+            user=self.user,
+            credential_id="AQIDBA",
+            public_key="public-key",
+            transports=["internal", "hybrid", "unknown"],
+        )
+
+        payload = PasskeyService.begin_authentication("passkey@example.com")
+
+        allow_credentials = payload["options"]["allowCredentials"]
+        self.assertEqual(len(allow_credentials), 1)
+        self.assertEqual(allow_credentials[0]["transports"], ["internal", "hybrid"])
+
+    @override_settings(
+        PASSKEY_RP_ID="localhost",
+        PASSKEY_RP_NAME="UEvent",
+        PASSKEY_CHALLENGE_TTL_SECONDS=300,
+    )
+    def test_begin_passkey_authentication_without_email_omits_allow_credentials(self):
+        PasskeyCredential.objects.create(
+            user=self.user,
+            credential_id="AQIDBA",
+            public_key="public-key",
+            transports=["internal"],
+        )
+
+        response = self.client.post(
+            reverse("users:passkey-authentication-options"),
+            {},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("allowCredentials", response.data["data"]["options"])
+
     @patch("apps.users.passkey_views.PasskeyService.verify_authentication")
     def test_verify_passkey_authentication_returns_tokens(self, mock_verify):
         credential = PasskeyCredential.objects.create(
@@ -915,6 +957,50 @@ class PasskeyAuthApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["data"]["access_token"], "access-token")
+        mock_verify.assert_called_once_with(
+            challenge_id="11111111-1111-1111-1111-111111111111",
+            credential={"id": "credential-id", "response": {}},
+            email="passkey@example.com",
+        )
+
+    @patch("apps.users.passkey_views.PasskeyService.verify_authentication")
+    def test_verify_passkey_authentication_allows_missing_email(self, mock_verify):
+        credential = PasskeyCredential.objects.create(
+            user=self.user,
+            credential_id="credential-id",
+            public_key="public-key",
+        )
+        mock_verify.return_value = type(
+            "PasskeyResult",
+            (),
+            {
+                "token_data": {
+                    "access_token": "access-token",
+                    "refresh_token": "refresh-token",
+                    "token_type": "Bearer",
+                    "expires_in": 300,
+                    "refresh_expires_in": 1800,
+                },
+                "user": self.user,
+                "credential": credential,
+            },
+        )()
+
+        response = self.client.post(
+            reverse("users:passkey-authentication-verify"),
+            {
+                "challenge_id": "11111111-1111-1111-1111-111111111111",
+                "credential": {"id": "credential-id", "response": {}},
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_verify.assert_called_once_with(
+            challenge_id="11111111-1111-1111-1111-111111111111",
+            credential={"id": "credential-id", "response": {}},
+            email="",
+        )
 
 
 class _Response:
