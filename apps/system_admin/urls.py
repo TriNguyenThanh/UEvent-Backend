@@ -6,6 +6,7 @@ from .views import (
     category_views,
     dashboard_views,
     event_views,
+    location_views,
     notification_views,
     settings_views,
     support_views,
@@ -128,6 +129,42 @@ urlpatterns = [
         "events/<uuid:pk>/status/",
         event_views.AdminEventStatusView.as_view(),
         name="event-status",
+    ),
+    # Location Management
+    path(
+        "locations/campuses/",
+        location_views.AdminCampusListCreateView.as_view(),
+        name="location-campus-list",
+    ),
+    path(
+        "locations/campuses/<uuid:pk>/",
+        location_views.AdminCampusDetailUpdateDeleteView.as_view(),
+        name="location-campus-detail",
+    ),
+    path(
+        "locations/buildings/",
+        location_views.AdminBuildingListCreateView.as_view(),
+        name="location-building-list",
+    ),
+    path(
+        "locations/buildings/<uuid:pk>/",
+        location_views.AdminBuildingDetailUpdateDeleteView.as_view(),
+        name="location-building-detail",
+    ),
+    path(
+        "locations/rooms/",
+        location_views.AdminRoomListCreateView.as_view(),
+        name="location-room-list",
+    ),
+    path(
+        "locations/rooms/<uuid:pk>/",
+        location_views.AdminRoomDetailUpdateDeleteView.as_view(),
+        name="location-room-detail",
+    ),
+    path(
+        "locations/statistics/",
+        location_views.AdminLocationStatisticsView.as_view(),
+        name="location-statistics",
     ),
     # Support Tickets
     path(

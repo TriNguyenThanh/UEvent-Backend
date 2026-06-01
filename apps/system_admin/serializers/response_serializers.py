@@ -41,6 +41,34 @@ class AdminCategoryStatisticsEnvelopeResponseSerializer(ApiSuccessResponseSerial
     """Envelope response cho admin category statistics."""
 
 
+class AdminCampusEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin campus detail/action."""
+
+
+class AdminCampusListEnvelopeResponseSerializer(PaginatedApiResponseSerializer):
+    """Envelope response cho admin campus list."""
+
+
+class AdminBuildingEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin building detail/action."""
+
+
+class AdminBuildingListEnvelopeResponseSerializer(PaginatedApiResponseSerializer):
+    """Envelope response cho admin building list."""
+
+
+class AdminRoomEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin room detail/action."""
+
+
+class AdminRoomListEnvelopeResponseSerializer(PaginatedApiResponseSerializer):
+    """Envelope response cho admin room list."""
+
+
+class AdminLocationStatisticsEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
+    """Envelope response cho admin location statistics."""
+
+
 class AdminEventEnvelopeResponseSerializer(ApiSuccessResponseSerializer):
     """Envelope response cho admin event detail/action."""
 
