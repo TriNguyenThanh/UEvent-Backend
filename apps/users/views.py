@@ -171,7 +171,8 @@ class UserProfileView(APIView):
         tags=["Mobile Auth"],
     )
     def get(self, request):
-        serializer = UserProfileOutputSerializer(request.user)
+        user = UserService.ensure_avatar_url(request.user)
+        serializer = UserProfileOutputSerializer(user)
         return success_response(data=serializer.data, message="Lấy profile thành công.")
 
     @swagger_auto_schema(
