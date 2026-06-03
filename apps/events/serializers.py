@@ -225,6 +225,15 @@ class PublicEventDetailOutputSerializer(PublicEventSearchOutputSerializer):
         return "unregistered"
 
 
+class PublicEventShareLinkOutputSerializer(serializers.Serializer):
+    event_id = serializers.UUIDField()
+    slug = serializers.CharField()
+    share_url = serializers.URLField()
+    visibility = serializers.ChoiceField(
+        choices=[Event.Visibility.PUBLIC, Event.Visibility.PRIVATE]
+    )
+
+
 class PublicEventSearchQuerySerializer(serializers.Serializer):
     search = serializers.CharField(required=False, allow_blank=True)
     q = serializers.CharField(required=False, allow_blank=True)
