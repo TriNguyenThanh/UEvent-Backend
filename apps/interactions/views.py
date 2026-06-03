@@ -1,4 +1,4 @@
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
@@ -10,11 +10,16 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
 from apps.events.models import Event
-from apps.interactions.models import EventFeedback, EventQuestion
+from apps.interactions.models import (
+    EventFeedback,
+    EventQuestion,
+    EventQuestionReply,
+)
 from apps.interactions.permissions import IsInteractionOwner
 from apps.interactions.serializers import (
     EventFeedbackSerializer,
     EventQuestionSerializer,
+    EventQuestionReplySerializer,
     QuestionAnswerSerializer,
 )
 from common.serializers import ApiErrorResponseSerializer
@@ -184,6 +189,14 @@ class EventQuestionListCreateView(generics.ListCreateAPIView):
         return (
             EventQuestion.objects.filter(event=event)
             .select_related("event", "user", "answered_by")
+            .prefetch_related(
+                Prefetch(
+                    "replies",
+                    queryset=EventQuestionReply.objects.select_related(
+                        "user"
+                    ).order_by("created_at"),
+                )
+            )
             .order_by("-is_pinned", "-asked_at", "-created_at")
         )
 
@@ -240,6 +253,14 @@ class EventPublicQuestionListView(generics.ListAPIView):
                 moderation_status=EventQuestion.ModerationStatus.VISIBLE,
             )
             .select_related("event", "user", "answered_by")
+            .prefetch_related(
+                Prefetch(
+                    "replies",
+                    queryset=EventQuestionReply.objects.select_related(
+                        "user"
+                    ).order_by("created_at"),
+                )
+            )
             .order_by("-is_pinned", "-asked_at", "-created_at")
         )
 
@@ -287,7 +308,81 @@ class QuestionDetailView(generics.RetrieveUpdateDestroyAPIView):
         return super().delete(request, *args, **kwargs)
 
     def get_queryset(self):  # type: ignore[override]
-        return EventQuestion.objects.select_related("event", "user", "answered_by")
+        return (
+            EventQuestion.objects.select_related("event", "user", "answered_by")
+            .prefetch_related(
+                Prefetch(
+                    "replies",
+                    queryset=EventQuestionReply.objects.select_related(
+                        "user"
+                    ).order_by("created_at"),
+                )
+            )
+        )
+
+
+class QuestionReplyListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = EventQuestionReplySerializer
+
+    def get_question(self):
+        return get_object_or_404(
+            EventQuestion.objects.select_related("event").prefetch_related(
+                "event__organizers"
+            ),
+            id=self.kwargs["question_id"],
+        )
+
+    def get_queryset(self):  # type: ignore[override]
+        question = self.get_question()
+        if (
+            question.moderation_status != EventQuestion.ModerationStatus.VISIBLE
+            and not is_event_organizer(self.request.user, question.event)
+        ):
+            raise PermissionDenied("You do not have access to this question.")
+        return (
+            EventQuestionReply.objects.filter(question=question)
+            .select_related("user")
+            .order_by("created_at")
+        )
+
+    @swagger_auto_schema(
+        operation_summary="List Question Replies",
+        operation_description="Xem các reply trong một câu hỏi.",
+        responses={200: EventQuestionReplySerializer(many=True), **INTERACTION_ERROR_RESPONSES},
+        tags=["Questions"],
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary="Create Question Reply",
+        operation_description="User hoặc organizer trả lời nối tiếp trong câu hỏi.",
+        request_body=EventQuestionReplySerializer,
+        responses={201: EventQuestionReplySerializer(), **INTERACTION_ERROR_RESPONSES},
+        tags=["Questions"],
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["question_id"] = self.kwargs["question_id"]
+        return context
+
+    def perform_create(self, serializer):
+        question = serializer.validated_data["question"]
+        if (
+            question.moderation_status != EventQuestion.ModerationStatus.VISIBLE
+            and not is_event_organizer(self.request.user, question.event)
+        ):
+            raise PermissionDenied("You do not have access to this question.")
+        serializer.save(
+            user=self.request.user,
+            is_organizer_reply=is_event_organizer(
+                self.request.user, question.event
+            ),
+        )
 
 
 class QuestionAnswerView(APIView):
@@ -302,7 +397,15 @@ class QuestionAnswerView(APIView):
     )
     def patch(self, request, question_id):
         question = get_object_or_404(
-            EventQuestion.objects.select_related("event", "user", "answered_by"),
+            EventQuestion.objects.select_related("event", "user", "answered_by")
+            .prefetch_related(
+                Prefetch(
+                    "replies",
+                    queryset=EventQuestionReply.objects.select_related(
+                        "user"
+                    ).order_by("created_at"),
+                )
+            ),
             id=question_id,
         )
         assert_event_organizer(request, question.event)
@@ -311,7 +414,9 @@ class QuestionAnswerView(APIView):
         question.answer_text = serializer.validated_data["answer_text"]
         question.answered_by = request.user
         question.answered_at = timezone.now()
-        question.save(update_fields=["answer_text", "answered_by", "answered_at", "updated_at"])
+        question.save(
+            update_fields=["answer_text", "answered_by", "answered_at", "updated_at"]
+        )
         return Response(EventQuestionSerializer(question).data, status=status.HTTP_200_OK)
 
 
