@@ -606,6 +606,121 @@ class TestOrganizerEventCRUD(APITestCase):
         self.assertEqual(draft_response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(private_response.status_code, status.HTTP_404_NOT_FOUND)
 
+    @override_settings(PUBLIC_WEB_BASE_URL="https://public.uevent.test")
+    def test_authenticated_user_can_get_share_link_for_public_event(self):
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Shareable Event",
+            slug="shareable-event",
+            visibility=Event.Visibility.PUBLIC,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+        attendee = User.objects.create_user(username="share_user", password="pass123")
+
+        self.client.force_authenticate(user=attendee)
+        response = self.client.get(f"/api/v1/events/{event.id}/share-link/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["event_id"], str(event.id))
+        self.assertEqual(response.data["data"]["slug"], "shareable-event")
+        self.assertEqual(
+            response.data["data"]["share_url"],
+            "https://public.uevent.test/events/share/shareable-event",
+        )
+        self.assertEqual(response.data["data"]["visibility"], Event.Visibility.PUBLIC)
+
+    def test_share_link_requires_authentication(self):
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Auth Share Event",
+            slug="auth-share-event",
+            visibility=Event.Visibility.PUBLIC,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+
+        response = self.client.get(f"/api/v1/events/{event.id}/share-link/")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_share_link_returns_forbidden_for_private_event(self):
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Private Share Event",
+            slug="private-share-event",
+            visibility=Event.Visibility.PRIVATE,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+        attendee = User.objects.create_user(username="private_share_user", password="pass123")
+
+        self.client.force_authenticate(user=attendee)
+        response = self.client.get(f"/api/v1/events/{event.id}/share-link/")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_share_link_returns_not_found_for_soft_deleted_event(self):
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Deleted Share Event",
+            slug="deleted-share-event",
+            visibility=Event.Visibility.PUBLIC,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+        attendee = User.objects.create_user(username="deleted_share_user", password="pass123")
+        event.delete()
+
+        self.client.force_authenticate(user=attendee)
+        response = self.client.get(f"/api/v1/events/{event.id}/share-link/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_share_link_returns_not_found_for_missing_event(self):
+        attendee = User.objects.create_user(username="missing_share_user", password="pass123")
+
+        self.client.force_authenticate(user=attendee)
+        response = self.client.get(f"/api/v1/events/{uuid.uuid4()}/share-link/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_anonymous_user_can_retrieve_public_event_detail_by_slug(self):
+        event = Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Slug Landing Event",
+            slug="slug-landing-event",
+            visibility=Event.Visibility.PUBLIC,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+
+        response = self.client.get("/api/v1/events/slug/slug-landing-event/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["id"], str(event.id))
+        self.assertEqual(response.data["data"]["slug"], "slug-landing-event")
+
+    def test_public_event_detail_by_slug_hides_private_event(self):
+        Event.objects.create(
+            category=self.category,
+            created_by=self.organizer,
+            title="Private Slug Event",
+            slug="private-slug-event",
+            visibility=Event.Visibility.PRIVATE,
+            status=Event.Status.ACTIVE,
+            **self.valid_times,
+        )
+
+        response = self.client.get("/api/v1/events/slug/private-slug-event/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_user_event_highlights_prioritizes_registered_events_regardless_status(self):
         attendee = User.objects.create_user(username="attendee", password="pass123")
         registered_event = Event.objects.create(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Prefetch, Q, QuerySet
 from django.utils.text import slugify
@@ -259,6 +260,39 @@ class PublicEventService:
             )
         except Event.DoesNotExist:
             raise NotFoundError(f"Event with ID {event_id} does not exist.")
+
+    @staticmethod
+    def get_public_event_by_slug(slug: str) -> Event:
+        """Get a single public event by slug for landing pages."""
+        try:
+            return PublicEventService._public_events_with_related().get(
+                slug=slug,
+                visibility=Event.Visibility.PUBLIC,
+                status__in=PublicEventService.PUBLIC_EVENT_STATUSES,
+            )
+        except Event.DoesNotExist:
+            raise NotFoundError(f"Event with slug {slug} does not exist.")
+
+    @staticmethod
+    def get_shareable_public_event(event_id) -> Event:
+        """Get event for public sharing, distinguishing private from unpublished."""
+        try:
+            event = Event.objects.only("id", "slug", "visibility", "status").get(pk=event_id)
+        except Event.DoesNotExist:
+            raise NotFoundError(f"Event with ID {event_id} does not exist.")
+
+        if event.visibility == Event.Visibility.PRIVATE:
+            raise ForbiddenError("Sự kiện riêng tư không hỗ trợ chia sẻ liên kết công khai.")
+
+        if event.status not in PublicEventService.PUBLIC_EVENT_STATUSES:
+            raise NotFoundError(f"Event with ID {event_id} does not exist.")
+
+        return event
+
+    @staticmethod
+    def build_share_url(event: Event) -> str:
+        return f"{settings.PUBLIC_WEB_BASE_URL}/events/share/{event.slug}"
+
 
 class UserEventService:
     @staticmethod

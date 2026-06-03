@@ -16,6 +16,7 @@ from apps.events.serializers import (
     OrganizerEventPresignedUrlOutputSerializer,
     PublicEventCategorySerializer,
     PublicEventDetailOutputSerializer,
+    PublicEventShareLinkOutputSerializer,
     PublicEventSearchQuerySerializer,
     PublicEventSearchOutputSerializer,
 )
@@ -126,6 +127,52 @@ class PublicEventDetailView(APIView):
         event = PublicEventService.get_public_event(pk)
         serializer = PublicEventDetailOutputSerializer(event, context={"request": request})
         return success_response(data=serializer.data)
+
+
+class PublicEventDetailBySlugView(APIView):
+    """
+    GET /api/v1/events/slug/<slug>/ - Get public event detail for landing pages
+    """
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(
+        operation_summary="Get Public Event Detail By Slug",
+        operation_description="Get a public approved or active event detail by slug for public landing pages.",
+        responses={200: PublicEventDetailOutputSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        tags=["Events"],
+    )
+    def get(self, request, slug):
+        event = PublicEventService.get_public_event_by_slug(slug)
+        serializer = PublicEventDetailOutputSerializer(event, context={"request": request})
+        return success_response(data=serializer.data)
+
+
+class PublicEventShareLinkView(APIView):
+    """
+    GET /api/v1/events/<uuid>/share-link/ - Get public event share link
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get Public Event Share Link",
+        operation_description="Get the canonical public share link for a public approved or active event.",
+        responses={200: PublicEventShareLinkOutputSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        tags=["Events"],
+    )
+    def get(self, request, pk):
+        event = PublicEventService.get_shareable_public_event(pk)
+        serializer = PublicEventShareLinkOutputSerializer(
+            {
+                "event_id": event.id,
+                "slug": event.slug,
+                "share_url": PublicEventService.build_share_url(event),
+                "visibility": event.visibility,
+            }
+        )
+        return success_response(
+            data=serializer.data,
+            message="Lấy liên kết chia sẻ thành công.",
+        )
 
 
 class MyEventHighlightsView(APIView):

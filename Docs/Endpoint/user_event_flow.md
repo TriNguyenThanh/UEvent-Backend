@@ -90,6 +90,21 @@ Response `200`:
 
 Neu event la `draft`, `private`, `cancelled`, khong ton tai, v.v. thi tra `404`.
 
+### Public event detail by slug
+
+```http
+GET /api/v1/events/slug/{slug}/
+```
+
+Endpoint public dung cho landing page web khi user mo link chia se `/events/share/{slug}`.
+
+Dieu kien event duoc tra ve:
+
+- `visibility = public`
+- `status = approved` hoac `active`
+
+Neu event la `private`, `draft`, `cancelled`, khong ton tai, v.v. thi tra `404`.
+
 ### Organizer event detail
 
 #### Danh sach event cua organizer
@@ -325,6 +340,37 @@ Response `200`:
 ```
 
 ## 2. Dang ky event
+
+## Share link event public
+
+```http
+GET /api/v1/events/{event_id}/share-link/
+```
+
+Yeu cau dang nhap.
+
+Chi ho tro event public co status `approved` hoac `active`.
+
+- Neu event la `private`: tra `403`
+- Neu event khong ton tai, da soft-delete, hoac chua public theo rule hien tai: tra `404`
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "code": "success",
+  "message": "Lay lien ket chia se thanh cong.",
+  "data": {
+    "event_id": "uuid",
+    "slug": "public-event-slug",
+    "share_url": "https://your-web-domain/events/share/public-event-slug",
+    "visibility": "public"
+  },
+  "errors": null,
+  "meta": {}
+}
+```
 
 ```http
 POST /api/v1/events/{event_id}/registrations/
