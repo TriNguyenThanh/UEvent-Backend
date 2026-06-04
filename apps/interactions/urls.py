@@ -10,6 +10,7 @@ from apps.interactions.views import (
     QuestionDetailView,
     QuestionHideView,
     QuestionPinView,
+    QuestionReplyListCreateView,
 )
 
 
@@ -21,6 +22,7 @@ urlpatterns = [
     path("events/<uuid:event_id>/questions/", EventQuestionListCreateView.as_view(), name="event-question-list-create"),
     path("events/<uuid:event_id>/questions/public/", EventPublicQuestionListView.as_view(), name="event-question-public-list"),
     path("questions/<uuid:question_id>/answer/", QuestionAnswerView.as_view(), name="question-answer"),
+    path("questions/<uuid:question_id>/replies/", QuestionReplyListCreateView.as_view(), name="question-reply-list-create"),
     path("questions/<uuid:question_id>/pin/", QuestionPinView.as_view(), name="question-pin"),
     path("questions/<uuid:question_id>/hide/", QuestionHideView.as_view(), name="question-hide"),
 ]

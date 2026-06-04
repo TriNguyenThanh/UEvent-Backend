@@ -52,7 +52,9 @@ def verify_qr_signature(payload: str, signature: str | None) -> bool:
 
 def _encode_qr_token(payload: dict) -> str:
     token_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
-    return base64.urlsafe_b64encode(token_json.encode("utf-8")).decode("ascii").rstrip("=")
+    return (
+        base64.urlsafe_b64encode(token_json.encode("utf-8")).decode("ascii").rstrip("=")
+    )
 
 
 def _decode_qr_token(raw_token: str) -> dict | None:
@@ -115,7 +117,9 @@ def create_ticket_for_registration(*, registration: EventRegistration) -> Ticket
         raise ConflictError(detail="Ticket already exists for this registration.")
 
     if registration.status != EventRegistration.RegistrationStatus.REGISTERED:
-        raise ValidationError({"registration": "Ticket can only be issued for registered attendees."})
+        raise ValidationError(
+            {"registration": "Ticket can only be issued for registered attendees."}
+        )
 
     return _issue_default_ticket(registration)
 
@@ -135,7 +139,10 @@ def create_event_registration(*, user, event_id, answers=None):
         .filter(event=event, user=user)
         .first()
     )
-    if existing_registration and existing_registration.status not in RE_REGISTERABLE_STATUSES:
+    if (
+        existing_registration
+        and existing_registration.status not in RE_REGISTERABLE_STATUSES
+    ):
         raise ConflictError(detail="You have already registered for this event.")
 
     active_registration_count = EventRegistration.objects.filter(
@@ -146,7 +153,9 @@ def create_event_registration(*, user, event_id, answers=None):
         ],
     ).count()
 
-    is_waitlisted = bool(event.max_capacity and active_registration_count >= event.max_capacity)
+    is_waitlisted = bool(
+        event.max_capacity and active_registration_count >= event.max_capacity
+    )
     next_status = (
         EventRegistration.RegistrationStatus.WAITLISTED
         if is_waitlisted
@@ -183,33 +192,57 @@ def create_event_registration(*, user, event_id, answers=None):
     if registration.status == EventRegistration.RegistrationStatus.REGISTERED:
         _restore_ticket_for_registration(registration)
 
-    return EventRegistration.objects.select_related("event", "ticket").get(id=registration.id)
+    registration = EventRegistration.objects.select_related(
+        "event", "user", "ticket"
+    ).get(id=registration.id)
+
+    from apps.notifications.services.event_notification_service import (
+        EventNotificationService,
+    )
+
+    EventNotificationService.notify_registration_created(registration)
+    return registration
 
 
 @transaction.atomic
-def cancel_event_registration(*, registration: EventRegistration, reason: str | None = None):
+def cancel_event_registration(
+    *, registration: EventRegistration, reason: str | None = None
+):
     if registration.status in {
         EventRegistration.RegistrationStatus.CANCELLED,
         EventRegistration.RegistrationStatus.REJECTED,
     }:
         raise ValidationError({"registration": "Registration is already cancelled."})
-    
+
     if registration.status in {
         EventRegistration.RegistrationStatus.CHECKED_IN,
     }:
         raise ValidationError({"registration": "Registration is already checked in."})
-    
+
     registration.status = EventRegistration.RegistrationStatus.CANCELLED
     registration.cancelled_at = timezone.now()
     registration.cancel_reason = reason or None
-    registration.save(update_fields=["status", "cancelled_at", "cancel_reason", "updated_at"])
+    registration.save(
+        update_fields=["status", "cancelled_at", "cancel_reason", "updated_at"]
+    )
 
     ticket = getattr(registration, "ticket", None)
     if ticket and ticket.status != Ticket.TicketStatus.CANCELLED:
         ticket.status = Ticket.TicketStatus.CANCELLED
         ticket.save(update_fields=["status", "updated_at"])
 
-    return EventRegistration.objects.select_related("event", "user", "ticket").get(id=registration.id)
+    cancelled_registration = EventRegistration.objects.select_related(
+        "event", "user", "ticket"
+    ).get(
+        id=registration.id
+    )
+
+    from apps.notifications.services.event_notification_service import (
+        EventNotificationService,
+    )
+
+    EventNotificationService.notify_registration_cancelled(cancelled_registration)
+    return cancelled_registration
 
 
 @transaction.atomic
@@ -226,7 +259,9 @@ def grant_cohost_role_to_registration(*, event: Event, registration_id):
         EventRegistration.RegistrationStatus.CANCELLED,
         EventRegistration.RegistrationStatus.REJECTED,
     }:
-        raise ValidationError({"registration": "Cannot grant co-host role to an inactive registration."})
+        raise ValidationError(
+            {"registration": "Cannot grant co-host role to an inactive registration."}
+        )
 
     role, _ = EventOrganizer.objects.update_or_create(
         event=event,
@@ -240,7 +275,9 @@ def grant_cohost_role_to_registration(*, event: Event, registration_id):
 def issue_registration_qr(*, registration: EventRegistration):
     ticket = getattr(registration, "ticket", None)
     if ticket is None:
-        raise ValidationError({"ticket": "No ticket has been issued for this registration."})
+        raise ValidationError(
+            {"ticket": "No ticket has been issued for this registration."}
+        )
     if ticket.status != Ticket.TicketStatus.VALID:
         raise ValidationError({"ticket": "This ticket is not active."})
 
@@ -282,23 +319,31 @@ def _resolve_ticket_from_payload(qr_payload: str, now):
             or expires_at <= int(now.timestamp())
         ):
             raise Ticket.DoesNotExist
-        return Ticket.objects.select_for_update().select_related(
-            "registration",
-            "registration__event",
-            "registration__user",
-        ).get(id=ticket_id)
+        return (
+            Ticket.objects.select_for_update()
+            .select_related(
+                "registration",
+                "registration__event",
+                "registration__user",
+            )
+            .get(id=ticket_id)
+        )
 
     return Ticket.lock_for_checkin(payload_value)
 
 
 def _resolve_ticket_from_email(*, event_id, email: str):
-    return Ticket.objects.select_for_update().select_related(
-        "registration",
-        "registration__event",
-        "registration__user",
-    ).get(
-        registration__event_id=event_id,
-        registration__user__email__iexact=email.strip(),
+    return (
+        Ticket.objects.select_for_update()
+        .select_related(
+            "registration",
+            "registration__event",
+            "registration__user",
+        )
+        .get(
+            registration__event_id=event_id,
+            registration__user__email__iexact=email.strip(),
+        )
     )
 
 
@@ -354,7 +399,8 @@ def process_checkin_scan(
                 elif event.end_at and event.end_at < now:
                     result = CheckinLog.CheckinResult.EVENT_UNAVAILABLE
                 elif ticket.status == Ticket.TicketStatus.USED or (
-                    registration.status == EventRegistration.RegistrationStatus.CHECKED_IN
+                    registration.status
+                    == EventRegistration.RegistrationStatus.CHECKED_IN
                 ):
                     result = CheckinLog.CheckinResult.ALREADY_CHECKED_IN
                 elif ticket.status in {
@@ -376,8 +422,13 @@ def process_checkin_scan(
                     ticket.status = Ticket.TicketStatus.USED
                     ticket.used_at = now
                     ticket.save(update_fields=["status", "used_at", "updated_at"])
-                    if registration.status != EventRegistration.RegistrationStatus.CHECKED_IN:
-                        registration.status = EventRegistration.RegistrationStatus.CHECKED_IN
+                    if (
+                        registration.status
+                        != EventRegistration.RegistrationStatus.CHECKED_IN
+                    ):
+                        registration.status = (
+                            EventRegistration.RegistrationStatus.CHECKED_IN
+                        )
                         registration.save(update_fields=["status", "updated_at"])
                     result = CheckinLog.CheckinResult.SUCCESS
 

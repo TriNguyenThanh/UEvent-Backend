@@ -6,7 +6,11 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.events.models import Event, EventCategory, EventOrganizer
-from apps.interactions.models import EventFeedback, EventQuestion
+from apps.interactions.models import (
+    EventFeedback,
+    EventQuestion,
+    EventQuestionReply,
+)
 from apps.registrations.models import EventRegistration
 from apps.users.models import User
 
@@ -175,6 +179,52 @@ class InteractionApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(visible.id))
+
+    def test_question_replies_are_saved_and_returned_with_public_questions(self):
+        question = EventQuestion.objects.create(
+            event=self.event,
+            user=self.user,
+            question_text="Can I ask a follow-up?",
+        )
+
+        reply_response = self.client.post(
+            f"/api/v1/questions/{question.id}/replies/",
+            {"content": "Yes, this is my follow-up."},
+            format="json",
+        )
+        public_response = self.client.get(
+            f"/api/v1/events/{self.event.id}/questions/public/"
+        )
+
+        self.assertEqual(reply_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(EventQuestionReply.objects.count(), 1)
+        self.assertFalse(reply_response.data["is_organizer_reply"])
+        self.assertEqual(public_response.status_code, status.HTTP_200_OK)
+        replies = public_response.data["results"][0]["replies"]
+        self.assertEqual(len(replies), 1)
+        self.assertEqual(replies[0]["content"], "Yes, this is my follow-up.")
+
+    def test_organizer_question_reply_is_marked_as_organizer_reply(self):
+        question = EventQuestion.objects.create(
+            event=self.event,
+            user=self.user,
+            question_text="Will there be Q&A?",
+        )
+        EventOrganizer.objects.create(
+            event=self.event,
+            user=self.other_user,
+            organizer_role=EventOrganizer.OrganizerRole.OWNER,
+        )
+        self.client.force_authenticate(self.other_user)
+
+        response = self.client.post(
+            f"/api/v1/questions/{question.id}/replies/",
+            {"content": "Yes, we will answer questions here."},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["is_organizer_reply"])
 
     def test_organizer_can_answer_pin_and_hide_question(self):
         question = EventQuestion.objects.create(

@@ -248,6 +248,11 @@ OTP_COOLDOWN_SECONDS = env.int(
     "OTP_COOLDOWN_SECONDS", default=60
 )  # Chờ 60s trước khi gửi lại
 
+PUBLIC_WEB_BASE_URL = env(
+    "PUBLIC_WEB_BASE_URL",
+    default="http://localhost:3000",
+).rstrip("/")
+
 # ── Cache (Redis) ──
 if CI or USE_SQLITE:
     CACHES = {

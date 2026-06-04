@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 
 from apps.events.serializers import (
     OrganizerEventDetailOutputSerializer,
+    OrganizerEventOrganizerEmailInputSerializer,
+    OrganizerEventOrganizerSummarySerializer,
     OrganizerEventInputSerializer,
     OrganizerEventListOutputSerializer,
     OrganizerEventListWithRoleOutputSerializer,
@@ -16,17 +18,21 @@ from apps.events.serializers import (
     OrganizerEventPresignedUrlOutputSerializer,
     PublicEventCategorySerializer,
     PublicEventDetailOutputSerializer,
+    PublicEventShareLinkOutputSerializer,
     PublicEventSearchQuerySerializer,
     PublicEventSearchOutputSerializer,
 )
 from apps.events.models import EventCategory
-from apps.events.services import OrganizerEventService, PublicEventService, UserEventService
+from apps.events.services import (
+    OrganizerEventService,
+    PublicEventService,
+    UserEventService,
+)
 from apps.utils.s3 import S3Client
 from common.exceptions import ForbiddenError, NotFoundError
 from common.pagination import EnvelopePageNumberPagination
 from common.responses import created_response, deleted_response, success_response
 from common.serializers import ApiErrorResponseSerializer
-
 
 ORGANIZER_EVENT_ERROR_RESPONSES = {
     400: ApiErrorResponseSerializer(),
@@ -40,6 +46,7 @@ class PublicEventCategoryListView(generics.ListAPIView):
     """
     GET /api/v1/event-categories/ - List active event categories
     """
+
     permission_classes = [AllowAny]
     serializer_class = PublicEventCategorySerializer
     pagination_class = None
@@ -62,12 +69,15 @@ class PublicEventSearchView(generics.ListAPIView):
     """
     GET /api/v1/events/search/ - Search public events for every role
     """
+
     permission_classes = [AllowAny]
     pagination_class = EnvelopePageNumberPagination
     serializer_class = PublicEventSearchOutputSerializer
 
     def get_queryset(self):
-        query_serializer = PublicEventSearchQuerySerializer(data=self.request.query_params)
+        query_serializer = PublicEventSearchQuerySerializer(
+            data=self.request.query_params
+        )
         query_serializer.is_valid(raise_exception=True)
         return PublicEventService.search_public_events(
             search=query_serializer.get_search_value(),
@@ -114,24 +124,87 @@ class PublicEventDetailView(APIView):
     """
     GET /api/v1/events/<uuid>/ - Get public event detail for users
     """
+
     permission_classes = [AllowAny]
 
     @swagger_auto_schema(
         operation_summary="Get Public Event Detail",
         operation_description="Get a public approved or active event detail for users.",
-        responses={200: PublicEventDetailOutputSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        responses={
+            200: PublicEventDetailOutputSerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
         tags=["Events"],
     )
     def get(self, request, pk):
         event = PublicEventService.get_public_event(pk)
-        serializer = PublicEventDetailOutputSerializer(event, context={"request": request})
+        serializer = PublicEventDetailOutputSerializer(
+            event, context={"request": request}
+        )
         return success_response(data=serializer.data)
+
+
+class PublicEventDetailBySlugView(APIView):
+    """
+    GET /api/v1/events/slug/<slug>/ - Get public event detail for landing pages
+    """
+
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(
+        operation_summary="Get Public Event Detail By Slug",
+        operation_description="Get a public approved or active event detail by slug for public landing pages.",
+        responses={
+            200: PublicEventDetailOutputSerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
+        tags=["Events"],
+    )
+    def get(self, request, slug):
+        event = PublicEventService.get_public_event_by_slug(slug)
+        serializer = PublicEventDetailOutputSerializer(
+            event, context={"request": request}
+        )
+        return success_response(data=serializer.data)
+
+
+class PublicEventShareLinkView(APIView):
+    """
+    GET /api/v1/events/<uuid>/share-link/ - Get public event share link
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get Public Event Share Link",
+        operation_description="Get the canonical public share link for a public approved or active event.",
+        responses={
+            200: PublicEventShareLinkOutputSerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
+        tags=["Events"],
+    )
+    def get(self, request, pk):
+        event = PublicEventService.get_shareable_public_event(pk)
+        serializer = PublicEventShareLinkOutputSerializer(
+            {
+                "event_id": event.id,
+                "slug": event.slug,
+                "share_url": PublicEventService.build_share_url(event),
+                "visibility": event.visibility,
+            }
+        )
+        return success_response(
+            data=serializer.data,
+            message="Lấy liên kết chia sẻ thành công.",
+        )
 
 
 class MyEventHighlightsView(APIView):
     """
     GET /api/v1/events/me/highlights/ - Get two relevant events for current user
     """
+
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
@@ -140,7 +213,10 @@ class MyEventHighlightsView(APIView):
             "Lấy tối đa 2 sự kiện của user hiện tại. Ưu tiên sự kiện user đã đăng ký "
             "bất kể trạng thái đăng ký; nếu thiếu thì bổ sung sự kiện user đã tạo."
         ),
-        responses={200: OrganizerEventListOutputSerializer(many=True), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        responses={
+            200: OrganizerEventListOutputSerializer(many=True),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
         tags=["Events"],
     )
     def get(self, request, *args, **kwargs):
@@ -154,6 +230,7 @@ class OrganizerEventListCreateView(generics.ListCreateAPIView):
     GET /api/v1/organizer/events/ - List organizer's events
     POST /api/v1/organizer/events/ - Create new event
     """
+
     permission_classes = [IsAuthenticated]
     pagination_class = EnvelopePageNumberPagination
     serializer_class = OrganizerEventListOutputSerializer
@@ -185,7 +262,10 @@ class OrganizerEventListCreateView(generics.ListCreateAPIView):
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
             openapi.Parameter("page_size", openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
         ],
-        responses={200: OrganizerEventListWithRoleOutputSerializer(many=True), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        responses={
+            200: OrganizerEventListWithRoleOutputSerializer(many=True),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
         tags=["Organizer Events"],
     )
     def get(self, request, *args, **kwargs):
@@ -201,7 +281,10 @@ class OrganizerEventListCreateView(generics.ListCreateAPIView):
         operation_summary="Create Organizer Event",
         operation_description="Create a new event as organizer.",
         request_body=OrganizerEventInputSerializer,
-        responses={201: OrganizerEventDetailOutputSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        responses={
+            201: OrganizerEventDetailOutputSerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
         tags=["Organizer Events"],
     )
     def post(self, request, *args, **kwargs):
@@ -224,13 +307,17 @@ class OrganizerEventPresignedUrlView(APIView):
     """
     POST /api/v1/organizer/events/presigned-url/ - Create S3 presigned URL for event assets
     """
+
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_summary="Create Organizer Event Upload URL",
         operation_description="Create a presigned S3 URL for uploading organizer event cover images.",
         request_body=OrganizerEventPresignedUrlInputSerializer,
-        responses={200: OrganizerEventPresignedUrlOutputSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        responses={
+            200: OrganizerEventPresignedUrlOutputSerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
         tags=["Organizer Events"],
     )
     def post(self, request, *args, **kwargs):
@@ -271,6 +358,7 @@ class OrganizerEventDetailUpdateDeleteView(APIView):
     PATCH /api/v1/organizer/events/<uuid>/ - Update event
     DELETE /api/v1/organizer/events/<uuid>/ - Soft delete event
     """
+
     permission_classes = [IsAuthenticated]
 
     def get_event(self, pk):
@@ -282,7 +370,10 @@ class OrganizerEventDetailUpdateDeleteView(APIView):
     @swagger_auto_schema(
         operation_summary="Get Organizer Event Detail",
         operation_description="Get single event detail for organizer.",
-        responses={200: OrganizerEventDetailOutputSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        responses={
+            200: OrganizerEventDetailOutputSerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
         tags=["Organizer Events"],
     )
     def get(self, request, pk):
@@ -294,12 +385,17 @@ class OrganizerEventDetailUpdateDeleteView(APIView):
         operation_summary="Update Organizer Event",
         operation_description="Update event fields. Only allowed fields are writable.",
         request_body=OrganizerEventInputSerializer,
-        responses={200: OrganizerEventDetailOutputSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        responses={
+            200: OrganizerEventDetailOutputSerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
         tags=["Organizer Events"],
     )
     def patch(self, request, pk):
         event = self.get_event(pk)
-        serializer = OrganizerEventInputSerializer(instance=event, data=request.data, partial=True)
+        serializer = OrganizerEventInputSerializer(
+            instance=event, data=request.data, partial=True
+        )
         serializer.is_valid(raise_exception=True)
 
         updated_event = OrganizerEventService.update_event(
@@ -317,10 +413,82 @@ class OrganizerEventDetailUpdateDeleteView(APIView):
     @swagger_auto_schema(
         operation_summary="Delete Organizer Event",
         operation_description="Soft delete event.",
-        responses={200: ApiErrorResponseSerializer(), **ORGANIZER_EVENT_ERROR_RESPONSES},
+        responses={
+            200: ApiErrorResponseSerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
         tags=["Organizer Events"],
     )
     def delete(self, request, pk):
         self.get_event(pk)
         OrganizerEventService.delete_event(actor=request.user, event_id=pk)
         return deleted_response(message="Xóa sự kiện thành công.")
+
+
+class OrganizerEventOrganizerListView(APIView):
+    """
+    GET /api/v1/organizer/events/<uuid:event_id>/organizers/ - List BTC members
+    POST /api/v1/organizer/events/<uuid:event_id>/organizers/ - Add BTC member by email
+    DELETE /api/v1/organizer/events/<uuid:event_id>/organizers/ - Remove BTC member by email
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="List Event Organizers",
+        operation_description="Organizer xem danh sách BTC của sự kiện.",
+        responses={
+            200: OrganizerEventOrganizerSummarySerializer(many=True),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
+        tags=["Organizer Events"],
+    )
+    def get(self, request, event_id):
+        organizers = OrganizerEventService.list_organizers(
+            actor=request.user, event_id=event_id
+        )
+        serializer = OrganizerEventOrganizerSummarySerializer(organizers, many=True)
+        return success_response(data=serializer.data)
+
+    @swagger_auto_schema(
+        operation_summary="Add Event Organizer By Email",
+        operation_description="Owner thêm BTC/co-host bằng email người dùng.",
+        request_body=OrganizerEventOrganizerEmailInputSerializer,
+        responses={
+            200: OrganizerEventOrganizerSummarySerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
+        tags=["Organizer Events"],
+    )
+    def post(self, request, event_id):
+        serializer = OrganizerEventOrganizerEmailInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        role = OrganizerEventService.add_organizer_by_email(
+            actor=request.user,
+            event_id=event_id,
+            email=serializer.validated_data["email"],
+        )
+        return success_response(
+            data=OrganizerEventOrganizerSummarySerializer(role).data,
+            message="Đã thêm BTC vào sự kiện.",
+        )
+
+    @swagger_auto_schema(
+        operation_summary="Remove Event Organizer By Email",
+        operation_description="Owner xóa BTC bằng email người dùng.",
+        request_body=OrganizerEventOrganizerEmailInputSerializer,
+        responses={
+            200: ApiErrorResponseSerializer(),
+            **ORGANIZER_EVENT_ERROR_RESPONSES,
+        },
+        tags=["Organizer Events"],
+    )
+    def delete(self, request, event_id):
+        serializer = OrganizerEventOrganizerEmailInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        OrganizerEventService.remove_organizer_by_email(
+            actor=request.user,
+            event_id=event_id,
+            email=serializer.validated_data["email"],
+        )
+        return deleted_response(message="Đã xóa BTC khỏi sự kiện.")

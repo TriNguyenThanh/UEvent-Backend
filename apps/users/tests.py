@@ -1,5 +1,6 @@
 from io import StringIO
 import time
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -76,6 +77,17 @@ class KeycloakProvisioningServiceTests(TestCase):
                 is_primary=True,
             ).exists()
         )
+
+    def test_provisions_new_user_with_generated_avatar_when_picture_missing(self):
+        user = KeycloakProvisioningService.provision_from_payload(
+            self.payload(picture="")
+        )
+
+        self.assertTrue(user.avatar_url)
+        parsed_url = urlparse(user.avatar_url)
+        query_params = parse_qs(parsed_url.query)
+        self.assertEqual(parsed_url.netloc, "ui-avatars.com")
+        self.assertEqual(query_params["name"], ["TU"])
 
     def test_syncs_user_roles_from_keycloak_realm_roles(self):
         user = KeycloakProvisioningService.provision_from_payload(
@@ -459,6 +471,51 @@ class OtpVerifyViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(cache.get(otp_service._key_code(self.email)))
+
+
+class UserProfileViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.User = get_user_model()
+
+    def _authenticate(self, **user_kwargs):
+        user = self.User.objects.create_user(
+            username=user_kwargs.pop("username", "student@example.com"),
+            email=user_kwargs.pop("email", "student@example.com"),
+            **user_kwargs,
+        )
+        self.client.force_authenticate(user=user)
+        return user
+
+    def test_profile_preserves_existing_avatar_url(self):
+        self._authenticate(
+            full_name="Nguyễn Văn A",
+            avatar_url="https://example.com/avatar.png",
+        )
+
+        response = self.client.get(reverse("users:user-profile"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["data"]["avatar_url"],
+            "https://example.com/avatar.png",
+        )
+
+    def test_profile_generates_avatar_url_from_display_name(self):
+        user = self._authenticate(full_name="Nguyễn Văn A")
+
+        response = self.client.get(reverse("users:user-profile"))
+
+        self.assertEqual(response.status_code, 200)
+        user.refresh_from_db()
+        avatar_url = response.data["data"]["avatar_url"]
+        parsed_url = urlparse(avatar_url)
+        query_params = parse_qs(parsed_url.query)
+
+        self.assertEqual(user.avatar_url, avatar_url)
+        self.assertEqual(parsed_url.netloc, "ui-avatars.com")
+        self.assertEqual(query_params["name"], ["NVA"])
+        self.assertEqual(query_params["format"], ["png"])
 
 
 class UserProfileEmailChangeViewTests(TestCase):

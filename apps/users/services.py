@@ -1,4 +1,6 @@
+import hashlib
 from typing import Any
+from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -33,7 +35,52 @@ class UserService:
             with transaction.atomic():
                 user.save(update_fields=update_fields)
 
+        UserService.ensure_avatar_url(user)
         return user
+
+    @staticmethod
+    def ensure_avatar_url(user):
+        """Persist a generated avatar once when the user has no avatar URL."""
+        if (user.avatar_url or "").strip():
+            return user
+
+        user.avatar_url = UserService.build_generated_avatar_url(user)
+        user.save(update_fields=["avatar_url", "updated_at"])
+        return user
+
+    @staticmethod
+    def build_generated_avatar_url(user) -> str:
+        display_name = (
+            user.full_name
+            or user.get_full_name()
+            or user.username
+            or user.email
+            or "User"
+        ).strip()
+        seed = display_name.lower().encode("utf-8")
+        background = hashlib.sha256(seed).hexdigest()[:6]
+        initials = UserService._avatar_initials(display_name)
+        params = urlencode(
+            {
+                "name": initials,
+                "background": background,
+                "color": "ffffff",
+                "size": "256",
+                "bold": "true",
+                "format": "png",
+            }
+        )
+        return f"https://ui-avatars.com/api/?{params}"
+
+    @staticmethod
+    def _avatar_initials(display_name: str) -> str:
+        normalized = " ".join(display_name.split())
+        parts = [part for part in normalized.split(" ") if part]
+        if len(parts) >= 2:
+            return "".join(part[0] for part in parts[:3]).upper()
+        if parts:
+            return parts[0][:2].upper()
+        return "U"
 
     @staticmethod
     def send_email_change_otp(user) -> str:
@@ -459,6 +506,9 @@ class KeycloakProvisioningService:
             update_fields.append("full_name")
         if avatar_url and user.avatar_url != avatar_url:
             user.avatar_url = avatar_url
+            update_fields.append("avatar_url")
+        elif not (user.avatar_url or "").strip():
+            user.avatar_url = UserService.build_generated_avatar_url(user)
             update_fields.append("avatar_url")
 
         if update_fields:

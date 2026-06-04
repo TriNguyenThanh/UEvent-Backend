@@ -5,12 +5,17 @@ from django.conf import settings
 from django.core.cache import cache
 from rest_framework import serializers
 
-from apps.events.models import Event, EventCategory, EventOrganizer, RegistrationFormField
+from apps.events.models import (
+    Event,
+    EventCategory,
+    EventOrganizer,
+    RegistrationFormField,
+)
 from apps.locations.models import Room
 from apps.registrations.models import EventRegistration
 from apps.utils.s3 import S3Client
 from apps.users.models import User
-
+from apps.users.services import UserService
 
 ALLOWED_EVENT_UPLOAD_CONTENT_TYPES = {
     "image/jpeg",
@@ -41,13 +46,19 @@ class OrganizerEventRoomSummarySerializer(serializers.Serializer):
 
 class OrganizerEventUserSummarySerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "full_name"]
+        fields = ["id", "username", "email", "full_name", "avatar_url"]
 
     def get_full_name(self, obj):
         return obj.full_name or obj.get_full_name()
+
+    def get_avatar_url(self, obj):
+        return (obj.avatar_url or "").strip() or UserService.build_generated_avatar_url(
+            obj
+        )
 
 
 class OrganizerEventOrganizerSummarySerializer(serializers.ModelSerializer):
@@ -56,6 +67,10 @@ class OrganizerEventOrganizerSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = EventOrganizer
         fields = ["id", "user", "organizer_role", "joined_at"]
+
+
+class OrganizerEventOrganizerEmailInputSerializer(serializers.Serializer):
+    email = serializers.EmailField()
 
 
 class OrganizerRegistrationFormFieldOutputSerializer(serializers.ModelSerializer):
@@ -115,7 +130,9 @@ class EventCoverImageUrlMixin(serializers.Serializer):
         return min(configured_timeout, safe_timeout)
 
 
-class OrganizerEventListOutputSerializer(EventCoverImageUrlMixin, serializers.ModelSerializer):
+class OrganizerEventListOutputSerializer(
+    EventCoverImageUrlMixin, serializers.ModelSerializer
+):
     category = OrganizerEventCategorySummarySerializer(read_only=True)
 
     class Meta:
@@ -160,13 +177,17 @@ class PublicEventSearchOutputSerializer(OrganizerEventListOutputSerializer):
 class PublicEventDetailOutputSerializer(PublicEventSearchOutputSerializer):
     room = serializers.SerializerMethodField()
     created_by = OrganizerEventUserSummarySerializer(read_only=True)
-    registration_fields = OrganizerRegistrationFormFieldOutputSerializer(many=True, read_only=True)
+    organizers = OrganizerEventOrganizerSummarySerializer(many=True, read_only=True)
+    registration_fields = OrganizerRegistrationFormFieldOutputSerializer(
+        many=True, read_only=True
+    )
     user_event_relation = serializers.SerializerMethodField()
 
     class Meta(PublicEventSearchOutputSerializer.Meta):
         fields = PublicEventSearchOutputSerializer.Meta.fields + [
             "room",
             "created_by",
+            "organizers",
             "registration_fields",
             "cancellation_deadline_at",
             "user_event_relation",
@@ -210,19 +231,32 @@ class PublicEventDetailOutputSerializer(PublicEventSearchOutputSerializer):
         ).exists():
             return "cohost"
 
-        is_registered = EventRegistration.objects.filter(
-            event=obj,
-            user=user,
-        ).exclude(
-            status__in=[
-                EventRegistration.RegistrationStatus.CANCELLED,
-                EventRegistration.RegistrationStatus.REJECTED,
-            ],
-        ).exists()
+        is_registered = (
+            EventRegistration.objects.filter(
+                event=obj,
+                user=user,
+            )
+            .exclude(
+                status__in=[
+                    EventRegistration.RegistrationStatus.CANCELLED,
+                    EventRegistration.RegistrationStatus.REJECTED,
+                ],
+            )
+            .exists()
+        )
         if is_registered:
             return "registered"
 
         return "unregistered"
+
+
+class PublicEventShareLinkOutputSerializer(serializers.Serializer):
+    event_id = serializers.UUIDField()
+    slug = serializers.CharField()
+    share_url = serializers.URLField()
+    visibility = serializers.ChoiceField(
+        choices=[Event.Visibility.PUBLIC, Event.Visibility.PRIVATE]
+    )
 
 
 class PublicEventSearchQuerySerializer(serializers.Serializer):
@@ -258,7 +292,9 @@ class OrganizerEventDetailOutputSerializer(OrganizerEventListOutputSerializer):
     room = serializers.SerializerMethodField()
     created_by = OrganizerEventUserSummarySerializer(read_only=True)
     organizers = OrganizerEventOrganizerSummarySerializer(many=True, read_only=True)
-    registration_fields = OrganizerRegistrationFormFieldOutputSerializer(many=True, read_only=True)
+    registration_fields = OrganizerRegistrationFormFieldOutputSerializer(
+        many=True, read_only=True
+    )
 
     class Meta(OrganizerEventListOutputSerializer.Meta):
         fields = OrganizerEventListOutputSerializer.Meta.fields + [
@@ -301,12 +337,20 @@ class OrganizerEventInputSerializer(serializers.Serializer):
         required=False,
         default=Event.Visibility.PUBLIC,
     )
-    registration_open_at = serializers.DateTimeField(required=False, allow_null=True, default=None)
-    registration_close_at = serializers.DateTimeField(required=False, allow_null=True, default=None)
-    cancellation_deadline_at = serializers.DateTimeField(required=False, allow_null=True, default=None)
+    registration_open_at = serializers.DateTimeField(
+        required=False, allow_null=True, default=None
+    )
+    registration_close_at = serializers.DateTimeField(
+        required=False, allow_null=True, default=None
+    )
+    cancellation_deadline_at = serializers.DateTimeField(
+        required=False, allow_null=True, default=None
+    )
     start_at = serializers.DateTimeField(required=True)
     end_at = serializers.DateTimeField(required=True)
-    max_capacity = serializers.IntegerField(required=False, allow_null=True, default=None)
+    max_capacity = serializers.IntegerField(
+        required=False, allow_null=True, default=None
+    )
     location_snapshot = serializers.CharField(
         required=False, allow_blank=True, allow_null=True, default=None
     )
@@ -366,9 +410,13 @@ class OrganizerEventInputSerializer(serializers.Serializer):
             return value
         clean_value = value.strip().lstrip("/")
         if clean_value.startswith(("http://", "https://")):
-            raise serializers.ValidationError("Cover image must be an S3 object key, not a URL.")
+            raise serializers.ValidationError(
+                "Cover image must be an S3 object key, not a URL."
+            )
         if not clean_value.startswith("events/"):
-            raise serializers.ValidationError("Cover image key must be under the events/ prefix.")
+            raise serializers.ValidationError(
+                "Cover image key must be under the events/ prefix."
+            )
         return clean_value
 
     # ---- cross-field validations ----
@@ -378,27 +426,39 @@ class OrganizerEventInputSerializer(serializers.Serializer):
         start_at = data.get("start_at")
         end_at = data.get("end_at")
         if start_at is not None and end_at is not None and start_at >= end_at:
-            raise serializers.ValidationError({"end_at": "End time must be after start time."})
+            raise serializers.ValidationError(
+                {"end_at": "End time must be after start time."}
+            )
 
         # registration_open_at <= registration_close_at when both present
         reg_open = data.get("registration_open_at")
         reg_close = data.get("registration_close_at")
         if reg_open is not None and reg_close is not None and reg_open > reg_close:
             raise serializers.ValidationError(
-                {"registration_close_at": "Registration close must be after registration open."}
+                {
+                    "registration_close_at": "Registration close must be after registration open."
+                }
             )
 
         # registration_close_at <= start_at when both present
         if reg_close is not None and start_at is not None and reg_close > start_at:
             raise serializers.ValidationError(
-                {"registration_close_at": "Registration must close before event starts."}
+                {
+                    "registration_close_at": "Registration must close before event starts."
+                }
             )
 
         # cancellation_deadline_at <= start_at when both present
         cancel_deadline = data.get("cancellation_deadline_at")
-        if cancel_deadline is not None and start_at is not None and cancel_deadline > start_at:
+        if (
+            cancel_deadline is not None
+            and start_at is not None
+            and cancel_deadline > start_at
+        ):
             raise serializers.ValidationError(
-                {"cancellation_deadline_at": "Cancellation deadline must be before event starts."}
+                {
+                    "cancellation_deadline_at": "Cancellation deadline must be before event starts."
+                }
             )
 
         return data
