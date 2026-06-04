@@ -5,13 +5,14 @@ import uuid
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Prefetch, Q, QuerySet
+from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework.exceptions import PermissionDenied
 
 from apps.events.models import Event, EventOrganizer, RegistrationFormField
 from apps.registrations.models import EventRegistration
-from common.exceptions import ForbiddenError, NotFoundError
-
+from apps.users.models import User
+from common.exceptions import ForbiddenError, NotFoundError, ValidationError
 
 ORGANIZER_EVENT_LIST_ROLES = {
     EventOrganizer.OrganizerRole.OWNER,
@@ -35,17 +36,36 @@ def assert_event_organizer(actor, event):
         raise PermissionDenied("You do not have organizer access to this event.")
 
 
+def is_event_owner(user, event):
+    if not user or not user.is_authenticated:
+        return False
+    if event.created_by_id == user.id:
+        return True
+    return event.organizers.filter(
+        user=user,
+        organizer_role=EventOrganizer.OrganizerRole.OWNER,
+    ).exists()
+
+
+def assert_event_owner(actor, event):
+    if not is_event_owner(actor, event):
+        raise ForbiddenError("Only event owners can manage BTC members.")
+
+
 class OrganizerEventService:
     @staticmethod
     def _events_with_related() -> QuerySet[Event]:
         """Base queryset with related data for event list/detail."""
-        return (
-            Event.objects
-            .select_related("category", "created_by", "room__building__campus")
-            .prefetch_related(
-                Prefetch("organizers", queryset=EventOrganizer.objects.select_related("user")),
-                Prefetch("registration_fields", queryset=RegistrationFormField.objects.order_by("sort_order")),
-            )
+        return Event.objects.select_related(
+            "category", "created_by", "room__building__campus"
+        ).prefetch_related(
+            Prefetch(
+                "organizers", queryset=EventOrganizer.objects.select_related("user")
+            ),
+            Prefetch(
+                "registration_fields",
+                queryset=RegistrationFormField.objects.order_by("sort_order"),
+            ),
         )
 
     @staticmethod
@@ -202,18 +222,102 @@ class OrganizerEventService:
         event = OrganizerEventService.get_event(actor, event_id)
         event.delete()
 
+    @staticmethod
+    def list_organizers(actor, event_id) -> QuerySet[EventOrganizer]:
+        event = OrganizerEventService.get_event(actor, event_id)
+        return event.organizers.select_related("user").order_by(
+            "organizer_role", "user__email"
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def add_organizer_by_email(actor, event_id, email: str) -> EventOrganizer:
+        event = OrganizerEventService.get_event(actor, event_id)
+        assert_event_owner(actor, event)
+
+        user = User.objects.filter(email__iexact=email.strip()).first()
+        if user is None:
+            raise ValidationError({"email": "Không tìm thấy người dùng với email này."})
+
+        role = (
+            EventOrganizer.all_objects.select_for_update()
+            .filter(event=event, user=user)
+            .first()
+        )
+        if role is None:
+            role = EventOrganizer.objects.create(
+                event=event,
+                user=user,
+                organizer_role=EventOrganizer.OrganizerRole.CO_HOST,
+            )
+        elif role.deleted_at is not None:
+            role.deleted_at = None
+            role.organizer_role = EventOrganizer.OrganizerRole.CO_HOST
+            role.joined_at = timezone.now()
+            role.save(
+                update_fields=[
+                    "deleted_at",
+                    "organizer_role",
+                    "joined_at",
+                    "updated_at",
+                ]
+            )
+        elif (
+            role.organizer_role != EventOrganizer.OrganizerRole.OWNER
+            and role.user_id != event.created_by_id
+            and role.organizer_role != EventOrganizer.OrganizerRole.CO_HOST
+        ):
+            role.organizer_role = EventOrganizer.OrganizerRole.CO_HOST
+            role.save(update_fields=["organizer_role", "updated_at"])
+
+        return EventOrganizer.all_objects.select_related("event", "user").get(
+            pk=role.pk
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def remove_organizer_by_email(actor, event_id, email: str) -> None:
+        event = OrganizerEventService.get_event(actor, event_id)
+        assert_event_owner(actor, event)
+
+        role = (
+            EventOrganizer.objects.select_related("user")
+            .filter(
+                event=event,
+                user__email__iexact=email.strip(),
+            )
+            .first()
+        )
+        if role is None:
+            raise NotFoundError("Không tìm thấy BTC với email này.")
+
+        if (
+            role.organizer_role == EventOrganizer.OrganizerRole.OWNER
+            or role.user_id == event.created_by_id
+        ):
+            raise ValidationError({"email": "Không thể xóa owner khỏi đội ngũ BTC."})
+
+        role.delete()
+
 
 class PublicEventService:
     PUBLIC_EVENT_STATUSES = {Event.Status.APPROVED, Event.Status.ACTIVE}
 
     @staticmethod
     def _public_events_with_related() -> QuerySet[Event]:
-        return (
-            Event.objects
-            .select_related("category", "created_by", "room__building__campus")
-            .prefetch_related(
-                Prefetch("registration_fields", queryset=RegistrationFormField.objects.order_by("sort_order")),
-            )
+        return Event.objects.select_related(
+            "category", "created_by", "room__building__campus"
+        ).prefetch_related(
+            Prefetch(
+                "registration_fields",
+                queryset=RegistrationFormField.objects.order_by("sort_order"),
+            ),
+            Prefetch(
+                "organizers",
+                queryset=EventOrganizer.objects.select_related("user").order_by(
+                    "created_at"
+                ),
+            ),
         )
 
     @staticmethod
@@ -236,7 +340,8 @@ class PublicEventService:
             )
         if category:
             queryset = queryset.filter(
-                Q(category__slug__iexact=category) | Q(category__name__icontains=category)
+                Q(category__slug__iexact=category)
+                | Q(category__name__icontains=category)
             )
         if status in PublicEventService.PUBLIC_EVENT_STATUSES:
             queryset = queryset.filter(status=status)
@@ -277,12 +382,16 @@ class PublicEventService:
     def get_shareable_public_event(event_id) -> Event:
         """Get event for public sharing, distinguishing private from unpublished."""
         try:
-            event = Event.objects.only("id", "slug", "visibility", "status").get(pk=event_id)
+            event = Event.objects.only("id", "slug", "visibility", "status").get(
+                pk=event_id
+            )
         except Event.DoesNotExist:
             raise NotFoundError(f"Event with ID {event_id} does not exist.")
 
         if event.visibility == Event.Visibility.PRIVATE:
-            raise ForbiddenError("Sự kiện riêng tư không hỗ trợ chia sẻ liên kết công khai.")
+            raise ForbiddenError(
+                "Sự kiện riêng tư không hỗ trợ chia sẻ liên kết công khai."
+            )
 
         if event.status not in PublicEventService.PUBLIC_EVENT_STATUSES:
             raise NotFoundError(f"Event with ID {event_id} does not exist.")
