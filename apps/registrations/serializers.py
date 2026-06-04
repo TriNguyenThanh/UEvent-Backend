@@ -4,6 +4,7 @@ from apps.events.serializers import EventCoverImageUrlMixin
 from apps.events.models import EventOrganizer
 from apps.registrations.models import CheckinLog, EventRegistration
 from apps.registrations.models import Ticket
+from apps.users.services import UserService
 
 
 class RegistrationCreateSerializer(serializers.Serializer):
@@ -45,6 +46,12 @@ class RegistrationUserSummarySerializer(serializers.Serializer):
     username = serializers.CharField(read_only=True)
     full_name = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True)
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, obj):
+        return (obj.avatar_url or "").strip() or UserService.build_generated_avatar_url(
+            obj
+        )
 
 
 class RegistrationListSerializer(serializers.ModelSerializer):
@@ -82,7 +89,9 @@ class RegistrationListSerializer(serializers.ModelSerializer):
 
 
 class RegistrationCancelSerializer(serializers.Serializer):
-    reason = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)
+    reason = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=500
+    )
 
 
 class EventRoleSerializer(serializers.ModelSerializer):
@@ -109,15 +118,25 @@ class RegistrationQrSerializer(serializers.Serializer):
 
 
 class EventCheckinScanInputSerializer(serializers.Serializer):
-    ticket_code = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    ticket_code = serializers.CharField(
+        required=False, allow_blank=True, max_length=100
+    )
     email = serializers.EmailField(required=False, allow_blank=True)
     qr_payload = serializers.CharField(required=False, allow_blank=True)
     qr_signature = serializers.CharField(required=False, allow_blank=True)
-    note = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)
+    note = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=500
+    )
 
     def validate(self, attrs):
-        if not attrs.get("ticket_code") and not attrs.get("email") and not attrs.get("qr_payload"):
-            raise serializers.ValidationError({"ticket": "Cần nhập email, mã vé hoặc QR payload."})
+        if (
+            not attrs.get("ticket_code")
+            and not attrs.get("email")
+            and not attrs.get("qr_payload")
+        ):
+            raise serializers.ValidationError(
+                {"ticket": "Cần nhập email, mã vé hoặc QR payload."}
+            )
         return attrs
 
 

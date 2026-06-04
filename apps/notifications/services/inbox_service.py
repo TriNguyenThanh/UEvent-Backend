@@ -15,25 +15,35 @@ class NotificationInboxService:
     @staticmethod
     def list_for_user(*, user):
         return (
-            NotificationRecipient.objects.select_related("notification", "notification__event")
+            NotificationRecipient.objects.select_related(
+                "notification", "notification__event"
+            )
             .filter(user=user)
             .order_by("-created_at")
         )
 
     @staticmethod
     def unread_count(*, user) -> int:
-        return NotificationRecipient.objects.filter(user=user, read_at__isnull=True).count()
+        return NotificationRecipient.objects.filter(
+            user=user, read_at__isnull=True
+        ).count()
 
     @staticmethod
     @transaction.atomic
     def mark_read(*, user, recipient_id) -> NotificationRecipient:
         try:
-            recipient = NotificationRecipient.objects.select_for_update().select_related("notification").get(
-                pk=recipient_id,
-                user=user,
+            recipient = (
+                NotificationRecipient.objects.select_for_update()
+                .select_related("notification")
+                .get(
+                    pk=recipient_id,
+                    user=user,
+                )
             )
         except NotificationRecipient.DoesNotExist as exc:
-            raise NotFoundError("Không tìm thấy thông báo của người dùng hiện tại.") from exc
+            raise NotFoundError(
+                "Không tìm thấy thông báo của người dùng hiện tại."
+            ) from exc
 
         if recipient.read_at is None:
             recipient.read_at = timezone.now()
@@ -44,11 +54,51 @@ class NotificationInboxService:
 
     @staticmethod
     @transaction.atomic
-    def register_device(*, user, fcm_token: str, device_name: str = "", user_agent: str = "", ip_address=None) -> dict:
+    def mark_opened(*, user, recipient_id) -> NotificationRecipient:
+        try:
+            recipient = (
+                NotificationRecipient.objects.select_for_update()
+                .select_related("notification")
+                .get(
+                    pk=recipient_id,
+                    user=user,
+                )
+            )
+        except NotificationRecipient.DoesNotExist as exc:
+            raise NotFoundError(
+                "Không tìm thấy thông báo của người dùng hiện tại."
+            ) from exc
+
+        update_fields = ["updated_at"]
+        if recipient.opened_at is None:
+            recipient.opened_at = timezone.now()
+            update_fields.append("opened_at")
+        if recipient.read_at is None:
+            recipient.read_at = recipient.opened_at
+            recipient.delivery_status = NotificationRecipient.DeliveryStatus.READ
+            update_fields.extend(["read_at", "delivery_status"])
+
+        recipient.save(update_fields=update_fields)
+        return recipient
+
+    @staticmethod
+    @transaction.atomic
+    def register_device(
+        *,
+        user,
+        fcm_token: str,
+        device_name: str = "",
+        user_agent: str = "",
+        ip_address=None,
+    ) -> dict:
         token = fcm_token.strip()
         now = timezone.now()
-        expires_at = now + timezone.timedelta(days=int(getattr(settings, "FCM_DEVICE_TOKEN_TTL_DAYS", 365)))
-        token_hash = hashlib.sha256(f"fcm:{user.pk}:{token}".encode("utf-8")).hexdigest()
+        expires_at = now + timezone.timedelta(
+            days=int(getattr(settings, "FCM_DEVICE_TOKEN_TTL_DAYS", 365))
+        )
+        token_hash = hashlib.sha256(
+            f"fcm:{user.pk}:{token}".encode("utf-8")
+        ).hexdigest()
 
         UserSession.objects.filter(fcm_token=token).exclude(user=user).update(
             fcm_token=None,
@@ -73,7 +123,9 @@ class NotificationInboxService:
     @transaction.atomic
     def unregister_device(*, user, fcm_token: str) -> int:
         now = timezone.now()
-        return UserSession.objects.filter(user=user, fcm_token=fcm_token.strip()).update(
+        return UserSession.objects.filter(
+            user=user, fcm_token=fcm_token.strip()
+        ).update(
             fcm_token=None,
             revoked_at=now,
             updated_at=now,
@@ -83,17 +135,34 @@ class NotificationInboxService:
     def to_output(recipient: NotificationRecipient) -> dict:
         notification = recipient.notification
         event = notification.event
+        metadata = notification.metadata or {}
+        event_id = metadata.get("event_id") or (str(event.id) if event else None)
+        action_label = notification.action_label
+        if not action_label and event:
+            action_label = "Xem sự kiện"
+        action_route = notification.action_route
+        if not action_route and event:
+            action_route = getattr(event, "deep_link", "") or ""
+
         return {
             "id": recipient.id,
+            "recipient_id": recipient.id,
             "notification_id": notification.id,
-            "event_id": event.id if event else None,
+            "event_id": event_id,
+            "registration_id": metadata.get("registration_id"),
+            "ticket_id": metadata.get("ticket_id"),
+            "question_id": metadata.get("question_id"),
             "title": notification.title,
             "message": notification.message,
             "type": notification.type,
+            "category": notification.category,
+            "target": notification.target,
+            "role_hint": metadata.get("role_hint"),
             "delivery_status": recipient.delivery_status,
             "delivered_at": recipient.delivered_at,
             "read_at": recipient.read_at,
-            "action_label": "Xem sự kiện" if event else None,
-            "action_route": getattr(event, "deep_link", "") if event else None,
+            "opened_at": recipient.opened_at,
+            "action_label": action_label,
+            "action_route": action_route,
             "created_at": recipient.created_at,
         }
