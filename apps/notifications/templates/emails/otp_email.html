@@ -1,0 +1,21 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<div class="greeting">Xin chào,</div>
+
+<p>Mã xác nhận đăng nhập UEvent của bạn là:</p>
+
+<div class="highlight-box">
+    <div class="highlight-title">Mã Xác Nhận</div>
+    <p class="highlight-code">{{ code }}</p>
+</div>
+
+<p style="margin-bottom: 24px;">Mã có hiệu lực trong <strong>{{ ttl_minutes }} phút</strong>.</p>
+<div class="text-danger">
+    <strong>Cảnh báo bảo mật:</strong> Không chia sẻ mã này với bất kỳ ai, kể cả nhân viên quản trị.
+</div>
+
+<p style="margin-top: 24px;">Nếu bạn không yêu cầu mã này, hãy bỏ qua email này.</p>
+
+<p style="margin-top: 40px;">Trân trọng,<br><strong>— Đội ngũ UEvent —</strong></p>
+{% endblock content %}
