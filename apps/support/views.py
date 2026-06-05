@@ -25,19 +25,16 @@ class HelpCenterView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        locale = request.query_params.get("locale") or "vi"
         category = request.query_params.get("category") or None
         search = request.query_params.get("search") or None
 
         categories = HelpCenterService.list_categories(
-            locale=locale,
             category=category,
             search=search,
         )
         return success_response(
             data=SupportCategoryHelpCenterSerializer(categories, many=True).data,
             message="Lấy nội dung Trung tâm hỗ trợ thành công.",
-            meta={"locale": locale},
         )
 
 
@@ -46,11 +43,9 @@ class HelpCenterArticleDetailView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, slug):
-        locale = request.query_params.get("locale") or "vi"
         try:
             article = HelpCenterService.get_published_article(
                 slug=slug,
-                locale=locale,
             )
         except SupportArticle.DoesNotExist:
             return error_response(
@@ -62,7 +57,6 @@ class HelpCenterArticleDetailView(APIView):
         return success_response(
             data=SupportArticleDetailSerializer(article).data,
             message="Lấy bài viết hỗ trợ thành công.",
-            meta={"locale": locale},
         )
 
 

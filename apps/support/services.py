@@ -16,13 +16,15 @@ from apps.support.models import (
 
 
 class HelpCenterService:
+    PUBLIC_LOCALE = "vi"
+
     @staticmethod
-    def published_articles(*, locale: str = "vi") -> QuerySet[SupportArticle]:
+    def published_articles() -> QuerySet[SupportArticle]:
         return (
             SupportArticle.objects.select_related("category")
             .filter(
                 status=SupportArticle.ArticleStatus.PUBLISHED,
-                locale=locale,
+                locale=HelpCenterService.PUBLIC_LOCALE,
                 category__is_active=True,
                 category__deleted_at__isnull=True,
             )
@@ -32,11 +34,10 @@ class HelpCenterService:
     @staticmethod
     def list_categories(
         *,
-        locale: str = "vi",
         category: str | None = None,
         search: str | None = None,
     ) -> QuerySet[SupportCategory]:
-        articles = HelpCenterService.published_articles(locale=locale)
+        articles = HelpCenterService.published_articles()
 
         if search:
             articles = articles.filter(
@@ -59,8 +60,8 @@ class HelpCenterService:
         )
 
     @staticmethod
-    def get_published_article(*, slug: str, locale: str = "vi") -> SupportArticle:
-        return HelpCenterService.published_articles(locale=locale).get(slug=slug)
+    def get_published_article(*, slug: str) -> SupportArticle:
+        return HelpCenterService.published_articles().get(slug=slug)
 
     @staticmethod
     def publish_article(article: SupportArticle) -> SupportArticle:
