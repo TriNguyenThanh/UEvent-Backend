@@ -529,6 +529,11 @@ class RegistrationApiTests(RegistrationTestMixin, APITestCase):
             list_response.data["results"][0]["user"]["avatar_url"],
             "https://cdn.test/attendee-avatar.png",
         )
+        self.assertTrue(
+            list_response.data["results"][0]["user"]["avatar_cache_key"].startswith(
+                "user-avatar:url:"
+            )
+        )
 
     def test_event_creator_can_list_registrations_without_explicit_organizer_role(self):
         self.create_registration(user=self.attendee)

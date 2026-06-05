@@ -61,6 +61,7 @@ class AdminEventListOutputSerializer(EventCoverImageUrlMixin, serializers.ModelS
             "max_capacity",
             "location_snapshot",
             "cover_image_url",
+            "cover_image_cache_key",
             "deep_link",
             "latest_report_type",
             "latest_moderation_reason",

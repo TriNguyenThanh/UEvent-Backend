@@ -3,8 +3,10 @@ from django.db import models
 from django.db.models import Q
 from common.models import BaseModel, SoftDeleteManager
 
+
 class CustomUserManager(SoftDeleteManager, UserManager):
     pass
+
 
 class User(BaseModel, AbstractUser):
     objects = CustomUserManager()
@@ -18,7 +20,10 @@ class User(BaseModel, AbstractUser):
     full_name = models.CharField(max_length=255, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
     avatar_url = models.URLField(blank=True)
-    account_status = models.CharField(max_length=20, choices=AccountStatus.choices, default=AccountStatus.ACTIVE)
+    avatar_image_key = models.CharField(max_length=500, blank=True)
+    account_status = models.CharField(
+        max_length=20, choices=AccountStatus.choices, default=AccountStatus.ACTIVE
+    )
     faculty = models.CharField(max_length=200, blank=True, null=True)
     class_name = models.CharField(max_length=100, blank=True, null=True)
 
@@ -34,5 +39,3 @@ class User(BaseModel, AbstractUser):
 
     def __str__(self):
         return self.get_full_name() or self.username
-
-

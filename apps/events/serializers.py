@@ -15,7 +15,7 @@ from apps.locations.models import Room
 from apps.registrations.models import EventRegistration
 from apps.utils.s3 import S3Client
 from apps.users.models import User
-from apps.users.services import UserService
+from apps.users.avatar_urls import get_user_avatar_cache_key, get_user_avatar_url
 
 ALLOWED_EVENT_UPLOAD_CONTENT_TYPES = {
     "image/jpeg",
@@ -47,18 +47,27 @@ class OrganizerEventRoomSummarySerializer(serializers.Serializer):
 class OrganizerEventUserSummarySerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
+    avatar_cache_key = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "full_name", "avatar_url"]
+        fields = [
+            "id",
+            "username",
+            "email",
+            "full_name",
+            "avatar_url",
+            "avatar_cache_key",
+        ]
 
     def get_full_name(self, obj):
         return obj.full_name or obj.get_full_name()
 
     def get_avatar_url(self, obj):
-        return (obj.avatar_url or "").strip() or UserService.build_generated_avatar_url(
-            obj
-        )
+        return get_user_avatar_url(obj)
+
+    def get_avatar_cache_key(self, obj):
+        return get_user_avatar_cache_key(obj)
 
 
 class OrganizerEventOrganizerSummarySerializer(serializers.ModelSerializer):
@@ -90,6 +99,7 @@ class OrganizerRegistrationFormFieldOutputSerializer(serializers.ModelSerializer
 
 class EventCoverImageUrlMixin(serializers.Serializer):
     cover_image_url = serializers.SerializerMethodField()
+    cover_image_cache_key = serializers.SerializerMethodField()
 
     def get_cover_image_url(self, obj):
         object_key = getattr(obj, "cover_image_key", None)
@@ -116,6 +126,13 @@ class EventCoverImageUrlMixin(serializers.Serializer):
         if cache_timeout > 0:
             cache.set(cache_key, presigned_url, timeout=cache_timeout)
         return presigned_url
+
+    def get_cover_image_cache_key(self, obj):
+        object_key = (getattr(obj, "cover_image_key", "") or "").strip()
+        if not object_key:
+            return ""
+        digest = hashlib.sha256(object_key.encode("utf-8")).hexdigest()
+        return f"event-cover:s3:{digest}"
 
     @staticmethod
     def _cover_image_cache_key(object_key):
@@ -148,6 +165,7 @@ class OrganizerEventListOutputSerializer(
             "end_at",
             "max_capacity",
             "cover_image_url",
+            "cover_image_cache_key",
             "created_at",
             "updated_at",
         ]

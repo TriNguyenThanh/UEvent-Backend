@@ -4,7 +4,7 @@ from apps.events.serializers import EventCoverImageUrlMixin
 from apps.events.models import EventOrganizer
 from apps.registrations.models import CheckinLog, EventRegistration
 from apps.registrations.models import Ticket
-from apps.users.services import UserService
+from apps.users.avatar_urls import get_user_avatar_cache_key, get_user_avatar_url
 
 
 class RegistrationCreateSerializer(serializers.Serializer):
@@ -47,11 +47,13 @@ class RegistrationUserSummarySerializer(serializers.Serializer):
     full_name = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True)
     avatar_url = serializers.SerializerMethodField()
+    avatar_cache_key = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return (obj.avatar_url or "").strip() or UserService.build_generated_avatar_url(
-            obj
-        )
+        return get_user_avatar_url(obj)
+
+    def get_avatar_cache_key(self, obj):
+        return get_user_avatar_cache_key(obj)
 
 
 class RegistrationListSerializer(serializers.ModelSerializer):
