@@ -710,7 +710,7 @@ class RegistrationApiTests(RegistrationTestMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(ticket.status, Ticket.TicketStatus.EXPIRED)
         self.assertEqual(
-            ticket.expires_at.isoformat().replace("+00:00", "Z"),
+            ticket.expires_at.isoformat(),
             response.data["expires_at"],
         )
 
