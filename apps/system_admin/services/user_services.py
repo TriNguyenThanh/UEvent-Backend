@@ -250,6 +250,12 @@ class AdminUserService:
     def ban_user(*, actor, target_user_id, reason: str) -> User:
         user = AdminUserService.get_user(target_user_id)
         
+        if user.id == actor.id:
+            raise ValidationError("Không thể tự khóa tài khoản của chính mình.")
+            
+        if user.is_staff or user.is_superuser:
+            raise ValidationError("Không thể khóa tài khoản quản trị viên.")
+        
         if user.account_status == User.AccountStatus.BANNED:
             raise ValidationError(f"User '{user.username}' is already banned.")
             
@@ -289,6 +295,12 @@ class AdminUserService:
     @transaction.atomic
     def soft_delete_user(*, actor, target_user_id, reason: str) -> User:
         user = AdminUserService.get_user(target_user_id)
+        
+        if user.id == actor.id:
+            raise ValidationError("Không thể tự xóa tài khoản của chính mình.")
+            
+        if user.is_staff or user.is_superuser:
+            raise ValidationError("Không thể xóa tài khoản quản trị viên.")
         
         if user.deleted_at is not None:
             raise ValidationError(f"User '{user.username}' is already soft deleted.")

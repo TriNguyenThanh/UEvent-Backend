@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.core import mail
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.test import APITestCase
@@ -529,6 +530,11 @@ class RegistrationApiTests(RegistrationTestMixin, APITestCase):
             list_response.data["results"][0]["user"]["avatar_url"],
             "https://cdn.test/attendee-avatar.png",
         )
+        self.assertTrue(
+            list_response.data["results"][0]["user"]["avatar_cache_key"].startswith(
+                "user-avatar:url:"
+            )
+        )
 
     def test_event_creator_can_list_registrations_without_explicit_organizer_role(self):
         self.create_registration(user=self.attendee)
@@ -705,8 +711,8 @@ class RegistrationApiTests(RegistrationTestMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(ticket.status, Ticket.TicketStatus.EXPIRED)
         self.assertEqual(
-            ticket.expires_at.isoformat().replace("+00:00", "Z"),
-            response.data["expires_at"],
+            ticket.expires_at,
+            parse_datetime(response.data["expires_at"]),
         )
 
     def test_organizer_can_retrieve_and_get_qr_for_event_ticket(self):

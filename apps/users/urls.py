@@ -1,5 +1,6 @@
 from django.urls import path
 from apps.users.auth_views import MobileLogoutView, MobileTokenRefreshView
+from apps.users.avatar_views import UserAvatarPresignedUrlView
 from apps.users.passkey_views import (
     PasskeyAuthenticationOptionsView,
     PasskeyAuthenticationVerifyView,
@@ -21,6 +22,11 @@ app_name = "users"
 
 urlpatterns = [
     path("profile/", UserProfileView.as_view(), name="user-profile"),
+    path(
+        "profile/avatar/presigned-url/",
+        UserAvatarPresignedUrlView.as_view(),
+        name="user-avatar-presigned-url",
+    ),
     path(
         "profile/email/otp/",
         UserProfileEmailOtpView.as_view(),

@@ -411,6 +411,11 @@ class TestOrganizerEventCRUD(APITestCase):
             response.data["data"]["cover_image_url"],
             "https://s3.test/events/image.jpg?signature=abc",
         )
+        self.assertTrue(
+            response.data["data"]["cover_image_cache_key"].startswith(
+                "event-cover:s3:"
+            )
+        )
         s3_client.generate_presigned_url.assert_called_with(
             "events/user-1/covers/image.jpg",
             method="get_object",
@@ -444,6 +449,10 @@ class TestOrganizerEventCRUD(APITestCase):
         self.assertEqual(
             second_response.data["data"]["cover_image_url"],
             "https://s3.test/cached.jpg?signature=abc",
+        )
+        self.assertEqual(
+            first_response.data["data"]["cover_image_cache_key"],
+            second_response.data["data"]["cover_image_cache_key"],
         )
         s3_client.generate_presigned_url.assert_called_once_with(
             "events/user-1/covers/cached.jpg",

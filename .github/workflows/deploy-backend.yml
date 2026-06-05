@@ -129,6 +129,7 @@ jobs:
           $COMPOSE up -d db redis jaeger openobserve
           $COMPOSE run --rm app python manage.py migrate --noinput
           $COMPOSE up -d --remove-orphans
+          $COMPOSE restart nginx
           $COMPOSE ps
 
       - name: Cleanup Docker images

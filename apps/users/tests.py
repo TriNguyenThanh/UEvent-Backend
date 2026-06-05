@@ -517,6 +517,83 @@ class UserProfileViewTests(TestCase):
         self.assertEqual(query_params["name"], ["NVA"])
         self.assertEqual(query_params["format"], ["png"])
 
+    @override_settings(
+        AWS_STORAGE_BUCKET_NAME="uevent-test",
+        AWS_S3_REGION_NAME="ap-southeast-1",
+        AWS_S3_ENDPOINT_URL="https://s3.ap-southeast-1.amazonaws.com",
+        AWS_S3_PRESIGNED_URL_EXPIRES=900,
+        AWS_S3_PRESIGNED_GET_URL_CACHE_TTL=300,
+    )
+    def test_profile_patch_updates_avatar_image_key_and_returns_presigned_url(self):
+        user = self._authenticate(full_name="Nguyễn Văn A")
+        object_key = f"users/{user.id}/avatars/avatar.png"
+        s3_client = patch("apps.users.avatar_urls.S3Client").start()
+        self.addCleanup(patch.stopall)
+        s3_instance = s3_client.return_value
+        s3_instance.generate_presigned_url.return_value = (
+            "https://s3.example.com/avatar-get?signature=abc"
+        )
+
+        response = self.client.patch(
+            reverse("users:user-profile"),
+            {"avatar_image_key": object_key},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        user.refresh_from_db()
+        self.assertEqual(user.avatar_image_key, object_key)
+        self.assertEqual(
+            response.data["data"]["avatar_url"],
+            "https://s3.example.com/avatar-get?signature=abc",
+        )
+        self.assertTrue(
+            response.data["data"]["avatar_cache_key"].startswith("user-avatar:s3:")
+        )
+        s3_instance.generate_presigned_url.assert_called_once_with(
+            object_key,
+            method="get_object",
+            expires_in=900,
+        )
+
+    @override_settings(
+        AWS_STORAGE_BUCKET_NAME="uevent-test",
+        AWS_S3_REGION_NAME="ap-southeast-1",
+        AWS_S3_ENDPOINT_URL="https://s3.ap-southeast-1.amazonaws.com",
+        AWS_S3_PRESIGNED_URL_EXPIRES=900,
+    )
+    def test_profile_avatar_presigned_url_returns_upload_contract(self):
+        user = self._authenticate(full_name="Nguyễn Văn A")
+        s3_client = patch("apps.users.avatar_views.S3Client").start()
+        self.addCleanup(patch.stopall)
+        s3_instance = s3_client.return_value
+        s3_instance.generate_presigned_url.return_value = (
+            "https://s3.example.com/upload?signature=abc"
+        )
+
+        response = self.client.post(
+            reverse("users:user-avatar-presigned-url"),
+            {"file_name": "avatar.png", "content_type": "image/png"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.data["data"]
+        self.assertTrue(data["object_key"].startswith(f"users/{user.id}/avatars/"))
+        self.assertNotIn("avatar_url", data)
+        self.assertEqual(
+            data["presigned_upload_url"],
+            "https://s3.example.com/upload?signature=abc",
+        )
+        self.assertEqual(data["method"], "PUT")
+        self.assertEqual(data["expires_in"], 900)
+        s3_instance.generate_presigned_url.assert_called_once_with(
+            data["object_key"],
+            method="put_object",
+            expires_in=900,
+            params={"ContentType": "image/png"},
+        )
+
 
 class UserProfileEmailChangeViewTests(TestCase):
     def setUp(self):
@@ -962,7 +1039,9 @@ class PasskeyAuthApiTests(TestCase):
         PASSKEY_RP_NAME="UEvent",
         PASSKEY_CHALLENGE_TTL_SECONDS=300,
     )
-    def test_begin_passkey_authentication_without_email_returns_empty_allow_credentials(self):
+    def test_begin_passkey_authentication_without_email_returns_empty_allow_credentials(
+        self,
+    ):
         PasskeyCredential.objects.create(
             user=self.user,
             credential_id="AQIDBA",

@@ -1,12 +1,24 @@
+from pathlib import PurePath
+
 from rest_framework import serializers
+
 from apps.users.models import PasskeyCredential, User
+from apps.users.avatar_urls import get_user_avatar_cache_key, get_user_avatar_url
+
+ALLOWED_AVATAR_UPLOAD_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
 
 
 class UserProfileOutputSerializer(serializers.ModelSerializer):
-    """Output serializer for mobile user profile — matches Flutter UserModel."""
+    """Output serializer for mobile user profile, matches Flutter UserModel."""
 
     primary_role = serializers.SerializerMethodField()
     is_profile_complete = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+    avatar_cache_key = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -22,6 +34,7 @@ class UserProfileOutputSerializer(serializers.ModelSerializer):
             "faculty",
             "class_name",
             "avatar_url",
+            "avatar_cache_key",
         ]
 
     def get_primary_role(self, obj) -> str:
@@ -38,6 +51,12 @@ class UserProfileOutputSerializer(serializers.ModelSerializer):
         - faculty: khoa / đơn vị
         """
         return bool(obj.full_name and obj.student_code and obj.faculty)
+
+    def get_avatar_url(self, obj) -> str:
+        return get_user_avatar_url(obj)
+
+    def get_avatar_cache_key(self, obj) -> str:
+        return get_user_avatar_cache_key(obj)
 
 
 class UpdateProfileInputSerializer(serializers.Serializer):
@@ -56,6 +75,48 @@ class UpdateProfileInputSerializer(serializers.Serializer):
     class_name = serializers.CharField(
         max_length=100, required=False, allow_blank=True, allow_null=True
     )
+    avatar_image_key = serializers.CharField(
+        max_length=500, required=False, allow_blank=True
+    )
+
+    def validate_avatar_image_key(self, value):
+        clean_value = (value or "").strip().lstrip("/")
+        if not clean_value:
+            return ""
+        if not clean_value.startswith("users/"):
+            raise serializers.ValidationError(
+                "Avatar key phải nằm trong thư mục users/."
+            )
+        if "/avatars/" not in clean_value:
+            raise serializers.ValidationError(
+                "Avatar key phải nằm trong thư mục avatars của user."
+            )
+        return clean_value
+
+
+class UserAvatarPresignedUrlInputSerializer(serializers.Serializer):
+    file_name = serializers.CharField(max_length=255)
+    content_type = serializers.ChoiceField(
+        choices=sorted(ALLOWED_AVATAR_UPLOAD_CONTENT_TYPES),
+        default="image/jpeg",
+        required=False,
+    )
+
+    def validate_file_name(self, value):
+        file_name = PurePath(value).name.strip()
+        if not file_name:
+            raise serializers.ValidationError("Tên file không được để trống.")
+        if "." not in file_name:
+            raise serializers.ValidationError("Tên file phải có phần mở rộng.")
+        return file_name
+
+
+class UserAvatarPresignedUrlOutputSerializer(serializers.Serializer):
+    object_key = serializers.CharField()
+    presigned_upload_url = serializers.URLField()
+    presigned_url = serializers.URLField()
+    method = serializers.CharField()
+    expires_in = serializers.IntegerField()
 
 
 class ChangeEmailNewOtpInputSerializer(serializers.Serializer):

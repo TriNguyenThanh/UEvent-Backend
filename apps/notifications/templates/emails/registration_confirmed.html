@@ -1,0 +1,49 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<div class="greeting">{{ greeting }}</div>
+
+<p>Chúc mừng! Bạn đã đăng ký thành công sự kiện <strong style="color: #b45309; font-size: 18px;">{{ event_title }}</strong>.</p>
+
+<div style="margin: 30px 0;">
+    <div style="background-color: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 12px; overflow: hidden;">
+        
+        <!-- Thời gian bắt đầu -->
+        <div style="border-bottom: 1px solid #f0f0f0; padding: 18px 20px;">
+            <div style="font-weight: 800; color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Thời gian bắt đầu</div>
+            <div style="font-size: 17px; font-weight: bold; color: #1a1a1a;">{{ start_time_str }}</div>
+        </div>
+        
+        <!-- Thời gian kết thúc -->
+        {% if end_time_str %}
+        <div style="border-bottom: 1px solid #f0f0f0; padding: 18px 20px;">
+            <div style="font-weight: 800; color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Thời gian kết thúc</div>
+            <div style="font-size: 17px; font-weight: bold; color: #1a1a1a;">{{ end_time_str }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Địa điểm -->
+        <div style="padding: 18px 20px;">
+            <div style="font-weight: 800; color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Địa điểm</div>
+            <div style="font-size: 16px; color: #333333;">{{ location_str }}</div>
+        </div>
+
+    </div>
+</div>
+
+{% if ticket_code %}
+<div class="highlight-box">
+    <div class="highlight-title">Mã Vé Của Bạn</div>
+    <p class="highlight-code" style="font-size: 32px; letter-spacing: 4px;">{{ ticket_code }}</p>
+</div>
+{% endif %}
+
+<p>Bạn có thể mở ứng dụng UEvent trên điện thoại để xem chi tiết sự kiện và xuất mã QR Code khi check-in tại cổng.</p>
+
+<div style="text-align: center; margin: 40px 0 10px;">
+    <!-- Nút to và tràn viền dễ bấm trên Mobile -->
+    <a href="{{ action_url|default:'#' }}" class="btn" style="display: block; width: 100%; box-sizing: border-box; font-size: 16px; padding: 16px 20px;">Đến Trang Quản Lý Vé</a>
+</div>
+
+<p style="margin-top: 40px;">Hẹn gặp bạn tại sự kiện!<br><strong>— Đội ngũ UEvent —</strong></p>
+{% endblock content %}
