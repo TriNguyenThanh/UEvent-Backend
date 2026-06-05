@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db import transaction
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from apps.events.models import Event, EventOrganizer
@@ -211,10 +212,30 @@ class EventNotificationService:
                 "— Đội ngũ UEvent",
             ]
         )
+        
+        start_at = timezone.localtime(event.start_at)
+        end_at = timezone.localtime(event.end_at) if event.end_at else None
+        
+        html_message = render_to_string(
+            "emails/registration_confirmed.html",
+            {
+                "subject": f"Đăng ký thành công: {event.title}",
+                "greeting": EventNotificationService._greeting_for(registration.user),
+                "event_title": event.title,
+                "time_str": EventNotificationService._format_event_time(event),
+                "start_time_str": start_at.strftime("%H:%M ngày %d/%m/%Y"),
+                "end_time_str": end_at.strftime("%H:%M ngày %d/%m/%Y") if end_at else None,
+                "location_str": EventNotificationService._format_event_location(event),
+                "ticket_code": ticket.ticket_code if ticket else None,
+                "action_url": f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/my-tickets",
+            }
+        )
+        
         EventNotificationService._send_user_email_on_commit(
             user=registration.user,
             subject=f"Đăng ký thành công: {event.title}",
             message="\n".join(lines),
+            html_message=html_message,
         )
 
     @staticmethod
@@ -235,10 +256,28 @@ class EventNotificationService:
                 "— Đội ngũ UEvent",
             ]
         )
+        
+        start_at = timezone.localtime(event.start_at)
+        end_at = timezone.localtime(event.end_at) if event.end_at else None
+        
+        html_message = render_to_string(
+            "emails/registration_waitlisted.html",
+            {
+                "subject": f"Đã ghi nhận đăng ký danh sách chờ: {event.title}",
+                "greeting": EventNotificationService._greeting_for(registration.user),
+                "event_title": event.title,
+                "time_str": EventNotificationService._format_event_time(event),
+                "start_time_str": start_at.strftime("%H:%M ngày %d/%m/%Y"),
+                "end_time_str": end_at.strftime("%H:%M ngày %d/%m/%Y") if end_at else None,
+                "location_str": EventNotificationService._format_event_location(event),
+            }
+        )
+        
         EventNotificationService._send_user_email_on_commit(
             user=registration.user,
             subject=f"Đã ghi nhận đăng ký danh sách chờ: {event.title}",
             message=message,
+            html_message=html_message,
         )
 
     @staticmethod
@@ -262,14 +301,33 @@ class EventNotificationService:
                 "— Đội ngũ UEvent",
             ]
         )
+        
+        start_at = timezone.localtime(event.start_at)
+        end_at = timezone.localtime(event.end_at) if event.end_at else None
+        
+        html_message = render_to_string(
+            "emails/registration_cancelled.html",
+            {
+                "subject": f"Đã hủy đăng ký: {event.title}",
+                "greeting": EventNotificationService._greeting_for(registration.user),
+                "event_title": event.title,
+                "time_str": EventNotificationService._format_event_time(event),
+                "start_time_str": start_at.strftime("%H:%M ngày %d/%m/%Y"),
+                "end_time_str": end_at.strftime("%H:%M ngày %d/%m/%Y") if end_at else None,
+                "location_str": EventNotificationService._format_event_location(event),
+                "cancel_reason": registration.cancel_reason,
+            }
+        )
+        
         EventNotificationService._send_user_email_on_commit(
             user=registration.user,
             subject=f"Đã hủy đăng ký: {event.title}",
             message="\n".join(lines),
+            html_message=html_message,
         )
 
     @staticmethod
-    def _send_user_email_on_commit(*, user, subject: str, message: str) -> None:
+    def _send_user_email_on_commit(*, user, subject: str, message: str, html_message: str = None) -> None:
         email = (getattr(user, "email", "") or "").strip()
         if not email:
             return
@@ -282,6 +340,7 @@ class EventNotificationService:
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[email],
                     fail_silently=False,
+                    html_message=html_message,
                 )
             except Exception:
                 logger.exception(

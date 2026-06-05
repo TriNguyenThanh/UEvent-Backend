@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/TriNguyenThanh/UEvent-backend-Django/main/Docs/logo-placeholder.png" alt="UEvent Backend Logo" width="200" height="200" style="border-radius:20px"/>
+  <img src="https://res.cloudinary.com/dkkvywz4g/image/upload/v1780654795/logo_kxy3gw.png" alt="UEvent Backend Logo" width="100" height="100" style="border-radius:20px"/>
 
   # UEvent API Gateway & Core Engine (Tiếng Việt)
   

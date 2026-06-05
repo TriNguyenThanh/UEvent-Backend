@@ -13,6 +13,7 @@ import string
 from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 # ── Cache key helpers ──────────────────────────────────────────────────────────
 
@@ -125,10 +126,21 @@ def _send_otp_email(email: str, code: str) -> None:
         f"Nếu bạn không yêu cầu đăng nhập, hãy bỏ qua email này.\n\n"
         f"— Đội ngũ UEvent"
     )
+    
+    html_message = render_to_string(
+        "emails/otp_email.html",
+        {
+            "subject": subject,
+            "code": code,
+            "ttl_minutes": ttl_minutes,
+        }
+    )
+
     send_mail(
         subject=subject,
         message=message,
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[email],
         fail_silently=False,
+        html_message=html_message,
     )
