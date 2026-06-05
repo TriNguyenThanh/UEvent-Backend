@@ -26,9 +26,13 @@ class UserService:
             "student_code",
             "faculty",
             "class_name",
+            "avatar_image_key",
         ):
             if field_name in validated_data:
-                setattr(user, field_name, validated_data[field_name])
+                value = validated_data[field_name]
+                if field_name == "avatar_image_key":
+                    value = UserService._validate_avatar_image_key(user, value)
+                setattr(user, field_name, value)
                 update_fields.append(field_name)
 
         if update_fields:
@@ -41,12 +45,31 @@ class UserService:
     @staticmethod
     def ensure_avatar_url(user):
         """Persist a generated avatar once when the user has no avatar URL."""
+        if (getattr(user, "avatar_image_key", "") or "").strip():
+            return user
         if (user.avatar_url or "").strip():
             return user
 
         user.avatar_url = UserService.build_generated_avatar_url(user)
         user.save(update_fields=["avatar_url", "updated_at"])
         return user
+
+    @staticmethod
+    def _validate_avatar_image_key(user, value):
+        clean_value = (value or "").strip().lstrip("/")
+        if not clean_value:
+            return ""
+
+        expected_prefix = f"users/{user.id}/avatars/"
+        if not clean_value.startswith(expected_prefix):
+            raise ValidationError(
+                {
+                    "avatar_image_key": (
+                        "Avatar phải được upload bằng URL do backend cấp cho tài khoản này."
+                    )
+                }
+            )
+        return clean_value
 
     @staticmethod
     def build_generated_avatar_url(user) -> str:
