@@ -33,6 +33,16 @@ class HelpCenterPublicApiTests(TestCase):
             status=SupportArticle.ArticleStatus.PUBLISHED,
             sort_order=1,
         )
+        cls.english_article = SupportArticle.objects.create(
+            category=cls.category,
+            title="How do I change my email?",
+            slug="doi-email",
+            summary="English email change guide.",
+            body="Open profile settings and change your email.",
+            locale="en",
+            status=SupportArticle.ArticleStatus.PUBLISHED,
+            sort_order=1,
+        )
         SupportArticle.objects.create(
             category=cls.category,
             title="Bản nháp không public",
@@ -61,6 +71,17 @@ class HelpCenterPublicApiTests(TestCase):
         articles = response.data["data"][0]["articles"]
         self.assertEqual(len(articles), 1)
         self.assertEqual(articles[0]["slug"], self.article.slug)
+        self.assertEqual(articles[0]["title"], self.article.title)
+
+    def test_help_center_ignores_requested_locale(self):
+        response = self.client.get(reverse("support:help-center"), {"locale": "en"})
+
+        self.assert_success_envelope(response)
+        self.assertEqual(len(response.data["data"]), 1)
+        articles = response.data["data"][0]["articles"]
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0]["title"], self.article.title)
+        self.assertNotEqual(articles[0]["title"], self.english_article.title)
 
     def test_help_center_supports_search_and_article_detail(self):
         search_response = self.client.get(
@@ -78,6 +99,13 @@ class HelpCenterPublicApiTests(TestCase):
         )
         self.assert_success_envelope(detail_response)
         self.assertEqual(detail_response.data["data"]["body"], self.article.body)
+
+        english_locale_response = self.client.get(
+            reverse("support:help-center-article-detail", kwargs={"slug": "doi-email"}),
+            {"locale": "en"},
+        )
+        self.assert_success_envelope(english_locale_response)
+        self.assertEqual(english_locale_response.data["data"]["body"], self.article.body)
 
     def test_help_center_does_not_return_archived_article_detail(self):
         self.article.status = SupportArticle.ArticleStatus.ARCHIVED
