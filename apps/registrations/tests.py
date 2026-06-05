@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.core import mail
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.test import APITestCase
@@ -710,8 +711,8 @@ class RegistrationApiTests(RegistrationTestMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(ticket.status, Ticket.TicketStatus.EXPIRED)
         self.assertEqual(
-            timezone.localtime(ticket.expires_at).isoformat(),
-            response.data["expires_at"],
+            ticket.expires_at,
+            parse_datetime(response.data["expires_at"]),
         )
 
     def test_organizer_can_retrieve_and_get_qr_for_event_ticket(self):
