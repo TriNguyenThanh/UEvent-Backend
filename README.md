@@ -5,8 +5,8 @@
   
   **The Enterprise-Grade Event Management Infrastructure for Modern Universities**
 
-  [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-  [![Django](https://img.shields.io/badge/Django-6.0+-092E20?style=flat-square&logo=django&logoColor=white)](https://www.djangoproject.com/)
+  [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+  [![Django](https://img.shields.io/badge/Django-5.1-092E20?style=flat-square&logo=django&logoColor=white)](https://www.djangoproject.com/)
   [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
   [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -16,16 +16,24 @@
   *Proudly engineered for the **University of Transport and Communications (UTC2)***
 </div>
 
+<p align=center>
+  <a href=./README.vi.md>Đọc bản Tiếng Việt</a>
+</p>
+
 ---
 
 ## 📖 Table of Contents
 
 - [About The Project](#-about-the-project)
+- [Related Repositories](#-related-repositories)
 - [System Architecture](#-system-architecture)
 - [Core Features](#-core-features)
 - [Project Structure](#-project-structure)
 - [Environment Variables](#-environment-variables)
+- [Required Dependencies](#-required-dependencies)
 - [Installation & Getting Started](#-installation--getting-started)
+- [Firebase Configuration](#-firebase-configuration)
+- [Test Accounts & Required Notes](#-test-accounts--required-notes)
 - [Usage & API Examples](#-usage--api-examples)
 - [Database & State Management](#-database--state-management)
 - [Testing & QA](#-testing--qa)
@@ -46,6 +54,19 @@ Unlike traditional CRUD apps, UEvent is designed with a **Feature-First Monolith
 - **Zero Double-Booking**: Guarantees ticket integrity using row-level database locking during concurrent ticket claims.
 - **Cryptographic Security**: Eliminates ticket counterfeiting and screenshot sharing with 15-second rotating, digitally signed QR codes.
 - **Academic Ecosystem Integration**: Natively maps to university student ID schemas (e.g., UTC2's 10-digit standard) and institutional SSO namespaces.
+
+---
+
+## 🔗 Related Repositories
+
+UEvent is split into dedicated backend and frontend repositories so the API, admin portal, and mobile app can be operated independently while still sharing one product contract.
+
+| Repository | Purpose |
+|------------|---------|
+| **Backend** | This repository: Django REST API, PostgreSQL domain model, authentication, FCM delivery, and system administration endpoints. |
+| **Frontend** | [UEvent-Frontend](https://github.com/TriNguyenThanh/UEvent-Frontend): Next.js Admin Portal and Flutter Mobile App. |
+
+When testing end to end, run this backend first, then point the frontend Web and Mobile apps to the backend API base URL.
 
 ---
 
@@ -72,7 +93,7 @@ graph TD
 ### Technology Stack
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Core Framework** | Django 6.0.3, DRF | Robust ORM, built-in admin, and rapid REST API generation. |
+| **Core Framework** | Python 3.11, Django 5.1.15, DRF 3.15.2 | Robust ORM, built-in admin, and rapid REST API generation. |
 | **Database** | PostgreSQL 16 | Relational integrity paired with JSONB fields for highly dynamic event registration forms. |
 | **Message Broker** | Redis 7 & Celery | Handles asynchronous tasks like bulk email sending, FCM push notifications, and daily cron jobs. |
 | **Observability** | Jaeger & OpenObserve | End-to-end distributed tracing (OpenTelemetry) and structured log aggregation via Fluent-bit. |
@@ -126,7 +147,19 @@ UEvent-Backend/
 
 ## ⚙️ Environment Variables
 
-Copy `.env.example` to `.env` and configure the following parameters:
+Copy `.env.example` to `.env` at the repository root and configure the following parameters. The committed example file contains placeholders only; never paste production secrets into it.
+
+### Configuration File Locations
+
+| File | Place / Edit Here | Purpose |
+|------|-------------------|---------|
+| Environment template | `.env.example` | Safe placeholder template for local setup. Commit this file. |
+| Local environment file | `.env` | Real local values for Django, PostgreSQL, Redis, Keycloak, Firebase, email, and observability. Do not commit this file. |
+| Production environment file | `.env.production` | Production/deployment values if your deployment flow uses a file. Keep it private and out of Git. |
+| Firebase Admin service account | `firebase-service-account.json` | Firebase Admin SDK credential downloaded from Firebase Console. Place it at the backend repository root for Docker Compose. |
+| Firebase Admin placeholder | `firebase-service-account.example.json` | Safe placeholder/sample. Do not use it as a real credential. |
+| Docker service account mount | `/run/firebase-service-account.json` inside `app` and `celery-worker` containers | Container path used by `FIREBASE_CREDENTIALS_PATH` when running Docker Compose. |
+| Django settings loader | `core/settings.py` | Reads `.env` values through `django-environ`; edit only when adding new settings. |
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
@@ -135,9 +168,57 @@ Copy `.env.example` to `.env` and configure the following parameters:
 | `POSTGRES_DB` | Name of the PostgreSQL database | `uevent_db` | Yes |
 | `POSTGRES_USER` | Database username | `postgres` | Yes |
 | `POSTGRES_PASSWORD`| Database password | `postgres` | Yes |
+| `HOST` | PostgreSQL host (`db` for Docker Compose, `localhost` for bare-metal) | `db` | Yes |
+| `PORT` | PostgreSQL port (`5432` inside Docker network, often `5432` locally) | `5432` | Yes |
+| `REDIS_URL` | Django cache Redis URL | `redis://redis:6379/0` | No |
 | `CELERY_BROKER_URL`| Redis broker connection string | `redis://localhost:6379/0`| Yes |
+| `CELERY_RESULT_BACKEND` | Redis result backend | `redis://localhost:6379/1` | Yes |
 | `FCM_ENABLED` | Toggle Firebase Push Notifications | `false` | No |
+| `FIREBASE_CREDENTIALS_PATH` | Path to Firebase Admin service account JSON | - | Required when `FCM_ENABLED=true` |
+| `FIREBASE_CREDENTIALS_JSON` | Inline Firebase Admin service account JSON alternative | - | Optional alternative |
+| `GOOGLE_OAUTH_CLIENT_IDS` | Comma-separated Google OAuth client IDs accepted by backend | - | Required for Google Sign-In |
 | `OTEL_ENABLED` | Enable OpenTelemetry Exporting | `false` | No |
+
+Minimal local `.env` baseline, also reflected in `.env.example`:
+
+```env
+DEBUG=True
+SECRET_KEY=change-me-local-only
+TICKET_QR_SECRET=change-me-local-ticket-secret
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+POSTGRES_DB=uevent_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+HOST=db
+PORT=5432
+
+REDIS_URL=redis://redis:6379/0
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/1
+
+FCM_ENABLED=false
+FIREBASE_CREDENTIALS_PATH=/run/firebase-service-account.json
+GOOGLE_OAUTH_CLIENT_IDS=
+PUBLIC_WEB_BASE_URL=http://localhost:3000
+```
+
+For bare-metal execution, change `HOST=localhost`, `PORT=5432`, `REDIS_URL=redis://localhost:6379/0`, `CELERY_BROKER_URL=redis://localhost:6379/0`, and `CELERY_RESULT_BACKEND=redis://localhost:6379/1`.
+
+---
+
+## 📦 Required Dependencies
+
+Install all Python packages from `requirements.txt`. The core runtime dependencies include:
+
+- `django`, `djangorestframework`, `django-filter`, `django-environ`, `drf-yasg`
+- `psycopg2-binary` for PostgreSQL
+- `celery`, `redis`, `django-redis` for asynchronous jobs and caching
+- `firebase-admin`, `google-auth` for FCM and Google token flows
+- `PyJWT`, `cryptography`, `webauthn==2.7.1` for authentication, QR signing, and passkeys
+- `opentelemetry-*`, `python-json-logger` for tracing and structured logs
+- `boto3`, `openpyxl`, `requests`, `cachetools` for integrations and export utilities
 
 ---
 
@@ -149,18 +230,19 @@ The entire infrastructure can be brought up with a single command.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/TriNguyenThanh/UEvent-backend-Django.git
-cd UEvent-backend-Django
+git clone https://github.com/TriNguyenThanh/UEvent-Backend.git
+cd UEvent-Backend
 
 # 2. Configure Environment
 cp .env.example .env
+# Then adjust secrets/hosts in .env as needed.
 
 # 3. Boot up the cluster
 docker-compose up -d --build
 
 # 4. Run Migrations & Seed Data
 docker-compose exec app python manage.py migrate
-docker-compose exec app python manage.py loaddata seed_data.json
+docker-compose exec app python manage.py seed_data --reset
 
 # 5. Create Superuser (Optional)
 docker-compose exec app python manage.py createsuperuser
@@ -185,18 +267,91 @@ python manage.py runserver
 
 ---
 
+## 🔥 Firebase Configuration
+
+The backend uses Firebase Admin SDK to send FCM push notifications. This is separate from the frontend Firebase client files (`google-services.json` and `GoogleService-Info.plist`).
+
+Required backend Firebase file:
+
+- `firebase-service-account.json`: Firebase Admin SDK service account JSON for the Firebase project.
+- `firebase-service-account.example.json`: placeholder/sample file; do not use it as a real credential.
+
+### Create Firebase Admin SDK Configuration
+
+Create the backend service account file from Firebase Console when enabling real FCM delivery:
+
+1. Open Firebase Console and select the same Firebase project used by the mobile app.
+2. Go to **Project settings** > **Service accounts**.
+3. Select **Firebase Admin SDK**.
+4. Click **Generate new private key**.
+5. Confirm the download. Firebase will download a JSON private key file.
+6. Rename the downloaded file to `firebase-service-account.json`.
+7. Place it at the backend repository root: `UEvent-Backend/firebase-service-account.json`.
+8. Set `FCM_ENABLED=true` and `FIREBASE_CREDENTIALS_PATH=/run/firebase-service-account.json` when using Docker Compose.
+9. For bare-metal execution, set `FIREBASE_CREDENTIALS_PATH` to the absolute or relative path of the JSON file, for example `firebase-service-account.json`.
+
+Docker Compose already mounts the service account into the app and worker containers:
+
+```yaml
+./firebase-service-account.json:/run/firebase-service-account.json:ro
+```
+
+Enable Firebase delivery with:
+
+```env
+FCM_ENABLED=true
+FIREBASE_CREDENTIALS_PATH=/run/firebase-service-account.json
+```
+
+Alternatively, provide the same service account JSON through `FIREBASE_CREDENTIALS_JSON` when file mounting is not available.
+
+Security notes:
+
+- Never commit a real Firebase service account to a public repository.
+- Rotate the service account if it has ever been exposed.
+- The mobile Android app must use the matching `google-services.json`, and the iOS app must use the matching `GoogleService-Info.plist` when iOS is enabled.
+- The frontend repository documents how to create client Firebase files and Android SHA fingerprints: [UEvent-Frontend](https://github.com/TriNguyenThanh/UEvent-Frontend).
+
+---
+
+## 🧪 Test Accounts & Required Notes
+
+The seed fixture at `Docs/database/data_seed.json` creates sample users such as `sysadmin`, `organizer`, `student01`, and `student02`, but their password fields are empty in the fixture. Treat them as seed data for relational testing, not as ready-to-login credentials.
+
+For local manual testing, create a usable account explicitly:
+
+```bash
+docker-compose exec app python manage.py createsuperuser
+```
+
+or, for bare-metal execution:
+
+```bash
+python manage.py createsuperuser
+```
+
+Required notes for the project to work correctly:
+
+- Start PostgreSQL and Redis before running Django without Docker.
+- Start Celery worker when testing scheduled notifications or push delivery: `celery -A core worker --loglevel=INFO`.
+- Configure Keycloak / Google OAuth values before testing production authentication flows.
+- Configure `CORS_ALLOWED_ORIGINS` to include the frontend URL, usually `http://localhost:3000`.
+- Keep `.env`, production secrets, and `firebase-service-account.json` out of Git.
+
+---
+
 ## 🔌 Usage & API Examples
 
 Once running, the API is accessible at `http://localhost:8000/api/v1/`.
 
 ### Interactive API Documentation
 UEvent implements fully compliant OpenAPI schemas. You can test endpoints directly via the browser:
-- **Swagger UI**: `http://localhost:8000/api/v1/swagger/`
-- **ReDoc**: `http://localhost:8000/api/v1/redoc/`
+- **Swagger UI**: `http://localhost:8000/swagger/`
+- **ReDoc**: `http://localhost:8000/redoc/`
 
 ### Example cURL Request (User Authentication)
 ```bash
-curl -X POST http://localhost:8000/api/v1/users/auth/login/ \
+curl -X POST http://localhost:8000/api/v1/admin/auth/login/ \
   -H "Content-Type: application/json" \
   -d '{
     "username": "5651071902",
