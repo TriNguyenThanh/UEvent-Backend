@@ -3,19 +3,47 @@
 {% block content %}
 <div class="greeting">Xin chào,</div>
 
-<p>Mã xác nhận đăng nhập UEvent của bạn là:</p>
+<p style="color: #374151; font-size: 15px; line-height: 1.7;">
+    Bạn vừa yêu cầu mã xác nhận để đăng nhập vào UEvent. Mã của bạn là:
+</p>
 
-<div class="highlight-box">
-    <div class="highlight-title">Mã Xác Nhận</div>
-    <p class="highlight-code">{{ code }}</p>
-</div>
+<!-- OTP block -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="margin: 28px 0; border-collapse: collapse; border-radius: 12px; overflow: hidden;
+              border: 1px solid #bfdbfe; background-color: #eff6ff;">
+    <tr>
+        <td style="padding: 24px; text-align: center;">
+            <div style="font-size: 13px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px;">
+                Mã Xác Nhận
+            </div>
+            <div style="font-size: 36px; font-weight: 800; color: #1d4ed8; letter-spacing: 6px;">
+                {{ code }}
+            </div>
+        </td>
+    </tr>
+    <tr style="background-color: #dbeafe;">
+        <td style="padding: 12px 20px; font-size: 13px; color: #1e40af; text-align: center;">
+            Mã có hiệu lực trong <strong>{{ ttl_minutes }} phút</strong>
+        </td>
+    </tr>
+</table>
 
-<p style="margin-bottom: 24px;">Mã có hiệu lực trong <strong>{{ ttl_minutes }} phút</strong>.</p>
-<div class="text-danger">
-    <strong>Cảnh báo bảo mật:</strong> Không chia sẻ mã này với bất kỳ ai, kể cả nhân viên quản trị.
-</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="margin: 20px 0; border-collapse: collapse; border-radius: 12px; overflow: hidden;
+              border: 1px solid #fca5a5; background-color: #fef2f2;">
+    <tr>
+        <td style="padding: 14px 20px; font-size: 14px; color: #991b1b;">
+            <strong style="color: #dc2626;">Cảnh báo bảo mật:</strong> Không chia sẻ mã này với bất kỳ ai, kể cả nhân viên quản trị.
+        </td>
+    </tr>
+</table>
 
-<p style="margin-top: 24px;">Nếu bạn không yêu cầu mã này, hãy bỏ qua email này.</p>
+<p style="color: #4b5563; font-size: 14px; line-height: 1.7; margin: 20px 0;">
+    Nếu bạn không yêu cầu mã này, hãy bỏ qua email này. Tài khoản của bạn vẫn an toàn.
+</p>
 
-<p style="margin-top: 40px;">Trân trọng,<br><strong>— Đội ngũ UEvent —</strong></p>
+<p style="margin-top: 36px; color: #374151; font-size: 14px;">
+    Trân trọng,<br>
+    <strong style="color: #1a1a1a;">— Đội ngũ UEvent —</strong>
+</p>
 {% endblock content %}

@@ -227,7 +227,10 @@ class EventNotificationService:
                 "end_time_str": end_at.strftime("%H:%M ngày %d/%m/%Y") if end_at else None,
                 "location_str": EventNotificationService._format_event_location(event),
                 "ticket_code": ticket.ticket_code if ticket else None,
-                "action_url": f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/my-tickets",
+                "action_url": EventNotificationService._build_action_route(
+                    target="ticket" if ticket else "event_user",
+                    metadata={"event_id": str(event.id), "ticket_id": str(ticket.id) if ticket else ""}
+                ),
             }
         )
         
@@ -270,6 +273,10 @@ class EventNotificationService:
                 "start_time_str": start_at.strftime("%H:%M ngày %d/%m/%Y"),
                 "end_time_str": end_at.strftime("%H:%M ngày %d/%m/%Y") if end_at else None,
                 "location_str": EventNotificationService._format_event_location(event),
+                "action_url": EventNotificationService._build_action_route(
+                    target="event_user",
+                    metadata={"event_id": str(event.id)}
+                ),
             }
         )
         
@@ -316,6 +323,10 @@ class EventNotificationService:
                 "end_time_str": end_at.strftime("%H:%M ngày %d/%m/%Y") if end_at else None,
                 "location_str": EventNotificationService._format_event_location(event),
                 "cancel_reason": registration.cancel_reason,
+                "action_url": EventNotificationService._build_action_route(
+                    target="event_user",
+                    metadata={"event_id": str(event.id)}
+                ),
             }
         )
         

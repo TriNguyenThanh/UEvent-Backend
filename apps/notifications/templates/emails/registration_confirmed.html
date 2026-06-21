@@ -3,47 +3,91 @@
 {% block content %}
 <div class="greeting">{{ greeting }}</div>
 
-<p>Chúc mừng! Bạn đã đăng ký thành công sự kiện <strong style="color: #b45309; font-size: 18px;">{{ event_title }}</strong>.</p>
+<p style="color: #374151; font-size: 15px; line-height: 1.7;">
+    Bạn đã đăng ký <strong style="color: #16a34a;">thành công</strong> tham gia sự kiện <strong style="color: #1a1a1a;">{{ event_title }}</strong>.
+</p>
 
-<div style="margin: 30px 0;">
-    <div style="background-color: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 12px; overflow: hidden;">
-        
-        <!-- Thời gian bắt đầu -->
-        <div style="border-bottom: 1px solid #f0f0f0; padding: 18px 20px;">
-            <div style="font-weight: 800; color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Thời gian bắt đầu</div>
-            <div style="font-size: 17px; font-weight: bold; color: #1a1a1a;">{{ start_time_str }}</div>
-        </div>
-        
-        <!-- Thời gian kết thúc -->
-        {% if end_time_str %}
-        <div style="border-bottom: 1px solid #f0f0f0; padding: 18px 20px;">
-            <div style="font-weight: 800; color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Thời gian kết thúc</div>
-            <div style="font-size: 17px; font-weight: bold; color: #1a1a1a;">{{ end_time_str }}</div>
-        </div>
-        {% endif %}
+<!-- Event details block -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="margin: 28px 0; border-collapse: collapse; border-radius: 12px; overflow: hidden;
+              border: 1px solid #fde68a; background-color: #fffbeb;">
+    <tr>
+        <td colspan="2"
+            style="padding: 14px 20px; background-color: #fef3c7;
+                   font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
+                   color: #b45309; text-transform: uppercase; border-bottom: 1px solid #fde68a;">
+            📋 Thông tin sự kiện
+        </td>
+    </tr>
+    <tr style="background-color: #fffbeb;">
+        <td width="80"
+            style="padding: 14px 20px; font-size: 12px; font-weight: 700;
+                   color: #78350f; vertical-align: top; white-space: nowrap;
+                   border-bottom: 1px solid #fef9c3;">
+            Thời gian
+        </td>
+        <td style="padding: 14px 20px 14px 0; font-size: 14px;
+                   color: #374151; font-weight: 500;
+                   border-bottom: 1px solid #fef9c3;">
+            {{ time_str }}
+        </td>
+    </tr>
+    <tr style="background-color: #fffbeb;">
+        <td width="80"
+            style="padding: 14px 20px; font-size: 12px; font-weight: 700;
+                   color: #78350f; vertical-align: top; white-space: nowrap;
+                   border-bottom: 1px solid #fef9c3;">
+            Địa điểm
+        </td>
+        <td style="padding: 14px 20px 14px 0; font-size: 14px;
+                   color: #374151; font-weight: 500;
+                   border-bottom: 1px solid #fef9c3;">
+            {{ location_str }}
+        </td>
+    </tr>
+    {% if ticket_code %}
+    <tr style="background-color: #f0fdf4;">
+        <td width="80"
+            style="padding: 14px 20px; font-size: 12px; font-weight: 700;
+                   color: #15803d; vertical-align: top; white-space: nowrap;">
+            Mã vé
+        </td>
+        <td style="padding: 14px 20px 14px 0; font-size: 15px;
+                   color: #15803d; font-weight: 700; letter-spacing: 2px;">
+            {{ ticket_code }}
+        </td>
+    </tr>
+    {% endif %}
+</table>
 
-        <!-- Địa điểm -->
-        <div style="padding: 18px 20px;">
-            <div style="font-weight: 800; color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Địa điểm</div>
-            <div style="font-size: 16px; color: #333333;">{{ location_str }}</div>
-        </div>
+<p style="color: #4b5563; font-size: 14px; line-height: 1.7; margin: 20px 0;">
+    Vui lòng lưu ý thời gian sự kiện. Bạn có thể sử dụng mã QR vé trong ứng dụng để check-in tại sự kiện.
+</p>
 
-    </div>
-</div>
+<!-- CTA Button -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 32px 0 16px;">
+    <tr>
+        <td align="center">
+            <a href="{{ action_url|default:'#' }}"
+               style="display: block; width: 100%; max-width: 100%;
+                      box-sizing: border-box;
+                      background-color: #ffb800;
+                      color: #6b4c00 !important;
+                      text-decoration: none;
+                      padding: 16px 24px;
+                      border-radius: 12px;
+                      font-weight: 800;
+                      font-size: 16px;
+                      text-align: center;
+                      box-shadow: 0 4px 12px rgba(255, 184, 0, 0.35);">
+                {% if ticket_code %}Xem vé trong UEvent{% else %}Xem sự kiện trong UEvent{% endif %}
+            </a>
+        </td>
+    </tr>
+</table>
 
-{% if ticket_code %}
-<div class="highlight-box">
-    <div class="highlight-title">Mã Vé Của Bạn</div>
-    <p class="highlight-code" style="font-size: 32px; letter-spacing: 4px;">{{ ticket_code }}</p>
-</div>
-{% endif %}
-
-<p>Bạn có thể mở ứng dụng UEvent trên điện thoại để xem chi tiết sự kiện và xuất mã QR Code khi check-in tại cổng.</p>
-
-<div style="text-align: center; margin: 40px 0 10px;">
-    <!-- Nút to và tràn viền dễ bấm trên Mobile -->
-    <a href="{{ action_url|default:'#' }}" class="btn" style="display: block; width: 100%; box-sizing: border-box; font-size: 16px; padding: 16px 20px;">Đến Trang Quản Lý Vé</a>
-</div>
-
-<p style="margin-top: 40px;">Hẹn gặp bạn tại sự kiện!<br><strong>— Đội ngũ UEvent —</strong></p>
+<p style="margin-top: 36px; color: #374151; font-size: 14px;">
+    Cảm ơn bạn đã đồng hành cùng chúng tôi!<br>
+    <strong style="color: #1a1a1a;">— Đội ngũ UEvent —</strong>
+</p>
 {% endblock content %}
