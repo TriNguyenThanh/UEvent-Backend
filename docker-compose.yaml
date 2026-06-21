@@ -32,6 +32,12 @@ services:
         condition: service_healthy
       jaeger:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8000"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
     networks:
       - backend
 
@@ -73,6 +79,10 @@ services:
         while ! nc -z "$${HOST}" "$${PORT}"; do
           sleep 1
         done
+        echo "Waiting for Django migrations..."
+        until python manage.py migrate --check >/dev/null 2>&1; do
+          sleep 2
+        done
         echo "Notification scheduler is running"
         while true; do
           python manage.py publish_scheduled_notifications --batch-size "$${NOTIFICATION_SCHEDULER_BATCH_SIZE:-100}" || true
@@ -81,6 +91,8 @@ services:
     volumes:
       - app_logs:/app/logs
     depends_on:
+      app:
+        condition: service_healthy
       db:
         condition: service_healthy
       redis:
