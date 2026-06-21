@@ -164,7 +164,7 @@ class SystemNotificationService:
                 "subject": subject,
                 "greeting": SystemNotificationService._greeting_for(user),
                 "note": request.review_note if request.review_note else None,
-                "action_url": "uevent://notifications/open?target=notification_detail",
+                "action_url": f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/app-redirect?target=notification_detail",
             }
         )
 
@@ -253,7 +253,7 @@ class SystemNotificationService:
                 "subject": subject,
                 "greeting": SystemNotificationService._greeting_for(user),
                 "reason": reason,
-                "action_url": "uevent://notifications/open?target=notification_detail",
+                "action_url": f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/app-redirect?target=notification_detail",
             }
         )
 

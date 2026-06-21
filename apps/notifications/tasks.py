@@ -105,7 +105,7 @@ def send_event_updated_emails_task(event_id: str, user_ids: list[str], changes: 
                 "event": event,
                 "changes": template_changes,
                 "what_changed": what_changed,
-                "action_url": f"uevent://notifications/open?target=event_user&event_id={event.id}",
+                "action_url": f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/app-redirect?target=event_user&event_id={event.id}",
             }
         )
         
