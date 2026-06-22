@@ -8,11 +8,13 @@ from .views import (
     event_views,
     location_views,
     notification_views,
+    report_views,
     settings_views,
     support_views,
     ticket_views,
     user_views,
 )
+from apps.organizer_requests import views as organizer_request_views
 
 app_name = "system_admin"
 
@@ -76,6 +78,31 @@ urlpatterns = [
         "users/<uuid:pk>/passkeys/<uuid:credential_id>/",
         user_views.AdminUserPasskeyRevokeView.as_view(),
         name="user-passkey-revoke",
+    ),
+    path(
+        "organizer-requests/",
+        organizer_request_views.AdminOrganizerRequestListView.as_view(),
+        name="organizer-request-list",
+    ),
+    path(
+        "organizer-requests/statistics/",
+        organizer_request_views.AdminOrganizerRequestStatisticsView.as_view(),
+        name="organizer-request-statistics",
+    ),
+    path(
+        "organizer-requests/<uuid:pk>/",
+        organizer_request_views.AdminOrganizerRequestDetailView.as_view(),
+        name="organizer-request-detail",
+    ),
+    path(
+        "organizer-requests/<uuid:pk>/approve/",
+        organizer_request_views.AdminOrganizerRequestApproveView.as_view(),
+        name="organizer-request-approve",
+    ),
+    path(
+        "organizer-requests/<uuid:pk>/reject/",
+        organizer_request_views.AdminOrganizerRequestRejectView.as_view(),
+        name="organizer-request-reject",
     ),
     path(
         "exports/<uuid:job_id>/",
@@ -358,5 +385,16 @@ urlpatterns = [
         "dashboard/audit-summary/",
         dashboard_views.AdminDashboardAuditSummaryView.as_view(),
         name="dashboard-audit-summary",
+    ),
+    # Reports
+    path(
+        "reports/overview/",
+        report_views.AdminReportOverviewView.as_view(),
+        name="report-overview",
+    ),
+    path(
+        "reports/export/",
+        report_views.AdminReportExportView.as_view(),
+        name="report-export",
     ),
 ]

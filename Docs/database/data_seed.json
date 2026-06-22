@@ -66,6 +66,32 @@
   },
   {
     "model": "users.user",
+    "pk": "615a4c87-45c6-4114-a2f5-faa50b19cb49",
+    "fields": {
+      "password": "",
+      "last_login": null,
+      "is_superuser": true,
+      "username": "AI Assistant",
+      "first_name": "AI",
+      "last_name": "Assistant",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-05-17T08:00:00Z",
+      "email": "ai-assistant@utc2.edu.vn",
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "student_code": null,
+      "full_name": "AI Assistant",
+      "phone_number": "",
+      "avatar_url": "",
+      "account_status": "active",
+      "faculty": "Phong Cong tac Sinh vien",
+      "class_name": "ORGANIZER"
+    }
+  },
+  {
+    "model": "users.user",
     "pk": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
     "fields": {
       "password": "",
@@ -557,9 +583,9 @@
       "category": "550959b4-cf3f-4d69-80bf-cc298dba5882",
       "room": "88888888-8888-4888-8888-888888888889",
       "created_by": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
-      "title": "Sự kiện âm nhạc UTC2 003",
-      "slug": "utc2-su-kien-003-2026",
-      "description": "Hoạt động âm nhạc, tập trung đổi mới sáng tạo và công nghệ.",
+      "title": "Django REST API Workshop",
+      "slug": "django-rest-api-workshop-2026",
+      "description": "Workshop thực hành xây dựng REST API bằng Django và Django REST Framework, bao gồm thiết kế API, tối ưu hiệu năng, cache, Celery và triển khai hệ thống.",
       "visibility": "public",
       "status": "draft",
       "registration_open_at": "2026-05-20T00:00:00Z",
@@ -570,7 +596,83 @@
       "max_capacity": 60,
       "location_snapshot": "UTC2 - Hội trường/Cụm phòng số 003, TP. Thủ Đức",
       "cover_image_key": "events/65943bed-44b9-47ea-b4df-76cd296fc55e/covers/72052c6cfa9143d19828650dfb497e3b-ec4ec6fe-7298-4871-a8f9-28bd17f47bd6.jpg",
-      "deep_link": "uevent://events/utc2-su-kien-003-2026"
+      "deep_link": "uevent://events/django-rest-api-workshop-2026"
+    }
+  },
+  {
+    "model": "interactions.eventaiqasetting",
+    "pk": "a1a1a1a1-a1a1-41a1-81a1-a1a1a1a1a1a1",
+    "fields": {
+      "created_at": "2026-04-17T09:44:00Z",
+      "updated_at": "2026-04-17T09:44:00Z",
+      "deleted_at": null,
+      "event": "3cce7b09-c99c-4384-b0c7-de6640f0bde5",
+      "is_enabled": true,
+      "mode": "draft",
+      "organizer_instructions": "Trả lời bằng tiếng Việt với giọng văn chuyên nghiệp, thân thiện và sử dụng câu đầy đủ chủ ngữ, vị ngữ. Đối với câu hỏi kỹ thuật liên quan trực tiếp đến Django, Python, REST API hoặc chủ đề workshop, có thể sử dụng kiến thức chuyên môn phổ biến; không được bịa đặt thông tin riêng của sự kiện.",
+      "min_confidence": "0.700"
+    }
+  },
+  {
+    "model": "interactions.eventaitopic",
+    "pk": "a2a2a2a2-a2a2-42a2-82a2-a2a2a2a2a2a2",
+    "fields": {
+      "created_at": "2026-04-17T09:45:00Z",
+      "updated_at": "2026-04-17T09:45:00Z",
+      "deleted_at": null,
+      "event": "3cce7b09-c99c-4384-b0c7-de6640f0bde5",
+      "title": "Phạm vi nội dung workshop",
+      "description": "Các chủ đề kỹ thuật được giải đáp trong workshop.",
+      "keywords": [
+        "Django",
+        "Python",
+        "Django REST Framework",
+        "REST API",
+        "kiến trúc hệ thống"
+      ],
+      "reference_content": "Workshop tập trung vào thiết kế và xây dựng REST API với Django REST Framework. Người tham dự có thể đặt câu hỏi về trường hợp nên sử dụng Django, kiến trúc ứng dụng, ORM, authentication, phân quyền, kiểm thử và triển khai API.",
+      "is_enabled": true
+    }
+  },
+  {
+    "model": "interactions.eventaitopic",
+    "pk": "a3a3a3a3-a3a3-43a3-83a3-a3a3a3a3a3a3",
+    "fields": {
+      "created_at": "2026-04-17T09:46:00Z",
+      "updated_at": "2026-04-17T09:46:00Z",
+      "deleted_at": null,
+      "event": "3cce7b09-c99c-4384-b0c7-de6640f0bde5",
+      "title": "Hiệu năng Django và Python",
+      "description": "Thông tin tham chiếu cho các câu hỏi về hiệu năng và khả năng mở rộng.",
+      "keywords": [
+        "hiệu năng",
+        "performance",
+        "scaling",
+        "cache",
+        "Celery"
+      ],
+      "reference_content": "Django phù hợp với các hệ thống web có nhiều nghiệp vụ và cần phát triển nhanh. Hiệu năng thực tế không chỉ phụ thuộc vào tốc độ của Python mà còn phụ thuộc vào truy vấn cơ sở dữ liệu, cache, số lượng worker, hạ tầng và kiến trúc hệ thống. Hệ thống lớn có thể mở rộng Django theo chiều ngang, tối ưu truy vấn, sử dụng Redis cache, xử lý tác vụ nền bằng Celery và tách riêng các tác vụ tính toán nặng hoặc yêu cầu độ trễ rất thấp.",
+      "is_enabled": true
+    }
+  },
+  {
+    "model": "interactions.eventaitopic",
+    "pk": "a4a4a4a4-a4a4-44a4-84a4-a4a4a4a4a4a4",
+    "fields": {
+      "created_at": "2026-04-17T09:47:00Z",
+      "updated_at": "2026-04-17T09:47:00Z",
+      "deleted_at": null,
+      "event": "3cce7b09-c99c-4384-b0c7-de6640f0bde5",
+      "title": "Tài liệu và hỗ trợ sau workshop",
+      "description": "Chính sách chia sẻ tài liệu cho người tham dự.",
+      "keywords": [
+        "slides",
+        "tài liệu",
+        "source code",
+        "recording"
+      ],
+      "reference_content": "Ban Tổ chức sẽ gửi slides và source code mẫu qua email cho người tham dự trong vòng 24 giờ sau khi workshop kết thúc. Workshop không cung cấp bản ghi hình. Nếu chưa nhận được tài liệu, người tham dự có thể liên hệ Ban Tổ chức qua kênh liên hệ chính thức của chương trình.",
+      "is_enabled": true
     }
   },
   {

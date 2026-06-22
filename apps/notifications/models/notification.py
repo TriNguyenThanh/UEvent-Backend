@@ -21,6 +21,9 @@ class Notification(BaseModel):
         NEW_REGISTRATION = "new_registration", "New Registration"
         ORGANIZER_ANNOUNCEMENT = "organizer_announcement", "Organizer Announcement"
         QUESTION_ANSWERED = "question_answered", "Question Answered"
+        ORGANIZER_REQUEST_APPROVED = "organizer_request_approved", "Organizer Request Approved"
+        ORGANIZER_REQUEST_REJECTED = "organizer_request_rejected", "Organizer Request Rejected"
+        EVENT_UPDATE = "event_update", "Event Update"
 
     class NotificationCategory(models.TextChoices):
         TICKET = "ticket", "Ticket"

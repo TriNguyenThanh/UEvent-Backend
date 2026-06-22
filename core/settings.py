@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "drf_yasg",
     "django_filters",
     "apps.users",
+    "apps.organizer_requests",
     "apps.locations",
     "apps.events",
     "apps.registrations",
@@ -162,6 +163,7 @@ KEYCLOAK_AUTH_USER_CACHE_TTL = env.int("KEYCLOAK_AUTH_USER_CACHE_TTL", default=3
 KEYCLOAK_JWKS_TIMEOUT = env.int("KEYCLOAK_JWKS_TIMEOUT", default=5)
 KEYCLOAK_TOKEN_TIMEOUT = env.int("KEYCLOAK_TOKEN_TIMEOUT", default=10)
 KEYCLOAK_JWT_ALGORITHMS = env.list("KEYCLOAK_JWT_ALGORITHMS", default=["RS256"])
+KEYCLOAK_JWT_LEEWAY_SECONDS = env.int("KEYCLOAK_JWT_LEEWAY_SECONDS", default=90)
 
 # Keycloak Admin API (dùng cho OTP Email Login — Token Exchange)
 KEYCLOAK_ADMIN_CLIENT_ID = env("KEYCLOAK_ADMIN_CLIENT_ID", default="uevent-backend")
@@ -253,6 +255,13 @@ PUBLIC_WEB_BASE_URL = env(
     default="http://localhost:3000",
 ).rstrip("/")
 
+# core/settings.py
+# Dify AI Configuration
+DIFY_AI_QA_ENABLED = env.bool("DIFY_AI_QA_ENABLED", default=False)
+DIFY_API_BASE_URL = env.str("DIFY_API_BASE_URL", default="https://api.dify.ai/v1")
+DIFY_API_KEY = env.str("DIFY_API_KEY", default="")
+DIFY_TIMEOUT_SECONDS = env.int("DIFY_TIMEOUT_SECONDS", default=30)
+DIFY_AI_ASSISTANT_USER_ID = env.str("DIFY_AI_ASSISTANT_USER_ID", default="615a4c87-45c6-4114-a2f5-faa50b19cb49")
 # ── Cache (Redis) ──
 if CI or USE_SQLITE:
     CACHES = {

@@ -195,6 +195,11 @@ class OrganizerEventService:
         """
         event = OrganizerEventService.get_event(actor, event_id)
 
+        old_start_at = event.start_at
+        old_end_at = event.end_at
+        old_room_id = event.room_id
+        old_location_snapshot = event.location_snapshot
+
         data.pop("slug", None)
 
         missing = object()
@@ -212,6 +217,61 @@ class OrganizerEventService:
                 setattr(event, field, value)
 
         event.save()
+
+        changes = {}
+        if old_start_at != event.start_at or old_end_at != event.end_at:
+            changes["time"] = {
+                "old_start_at": old_start_at,
+                "old_end_at": old_end_at,
+                "new_start_at": event.start_at,
+                "new_end_at": event.end_at,
+            }
+        if old_room_id != event.room_id or old_location_snapshot != event.location_snapshot:
+            # Resolve human-readable location text for both old and new
+            def _location_text(room_id, snapshot) -> str:
+                if snapshot:
+                    return snapshot
+                if room_id:
+                    from apps.locations.models import Room
+                    try:
+                        room = Room.objects.get(pk=room_id)
+                        name = getattr(room, "name", "") or ""
+                        code = getattr(room, "code", "") or ""
+                        if name and code:
+                            return f"{name} ({code})"
+                        return name or code or "Chưa cập nhật"
+                    except Room.DoesNotExist:
+                        pass
+                return "Chưa cập nhật"
+
+            changes["location"] = {
+                "old": _location_text(old_room_id, old_location_snapshot),
+                "new": _location_text(event.room_id, event.location_snapshot),
+            }
+            
+        if changes:
+            # Serialize datetimes for Celery (JSON-safe)
+            safe_changes: dict = {}
+            if "time" in changes:
+                t = changes["time"]
+                safe_changes["time"] = {
+                    "old_start_at": t["old_start_at"].isoformat() if t["old_start_at"] else None,
+                    "old_end_at": t["old_end_at"].isoformat() if t["old_end_at"] else None,
+                    "new_start_at": t["new_start_at"].isoformat() if t["new_start_at"] else None,
+                    "new_end_at": t["new_end_at"].isoformat() if t["new_end_at"] else None,
+                }
+            if "location" in changes:
+                safe_changes["location"] = changes["location"]  # already a dict {old, new}
+
+            _event_id = str(event.pk)
+            _actor_id = str(actor.pk)
+            _safe_changes = safe_changes
+
+            def _dispatch():
+                from apps.notifications.tasks import notify_event_updated_task
+                notify_event_updated_task.delay(_event_id, _actor_id, _safe_changes)
+
+            transaction.on_commit(_dispatch)
 
         return OrganizerEventService._events_with_related().get(pk=event.pk)
 

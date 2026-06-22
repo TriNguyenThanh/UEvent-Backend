@@ -4,10 +4,9 @@
 <div class="greeting">{{ greeting }}</div>
 
 <p style="color: #374151; font-size: 15px; line-height: 1.7;">
-    Đăng ký của bạn cho sự kiện <strong style="color: #1a1a1a;">{{ event_title }}</strong> đã được <strong style="color: #dc2626;">hủy thành công</strong>.
+    Rất tiếc, yêu cầu trở thành người tổ chức sự kiện của bạn đã bị quản trị viên <strong style="color: #dc2626;">từ chối</strong>.
 </p>
 
-<!-- Event details block -->
 <table width="100%" cellpadding="0" cellspacing="0" border="0"
        style="margin: 28px 0; border-collapse: collapse; border-radius: 12px; overflow: hidden;
               border: 1px solid #fca5a5; background-color: #fef2f2;">
@@ -16,39 +15,18 @@
             style="padding: 14px 20px; background-color: #fee2e2;
                    font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
                    color: #991b1b; text-transform: uppercase; border-bottom: 1px solid #fca5a5;">
-            📋 Thông tin sự kiện
+            📋 Lý do từ chối
         </td>
     </tr>
-    <tr style="background-color: #fef2f2;">
-        <td width="80"
-            style="padding: 14px 20px; font-size: 12px; font-weight: 700;
-                   color: #7f1d1d; vertical-align: top; white-space: nowrap;
-                   border-bottom: 1px solid #fee2e2;">
-            Thời gian
-        </td>
-        <td style="padding: 14px 20px 14px 0; font-size: 14px;
-                   color: #4b5563; font-weight: 500; text-decoration: line-through;
-                   border-bottom: 1px solid #fee2e2;">
-            {{ time_str }}
+    <tr>
+        <td style="padding: 20px; font-size: 15px; color: #991b1b; font-weight: 500; line-height: 1.6;">
+            {{ reason }}
         </td>
     </tr>
-    {% if cancel_reason %}
-    <tr style="background-color: #fef2f2;">
-        <td width="80"
-            style="padding: 14px 20px; font-size: 12px; font-weight: 700;
-                   color: #dc2626; vertical-align: top; white-space: nowrap;">
-            Lý do
-        </td>
-        <td style="padding: 14px 20px 14px 0; font-size: 14px;
-                   color: #dc2626; font-weight: 700;">
-            {{ cancel_reason }}
-        </td>
-    </tr>
-    {% endif %}
 </table>
 
 <p style="color: #4b5563; font-size: 14px; line-height: 1.7; margin: 20px 0;">
-    Nếu muốn tham gia lại, bạn có thể đăng ký lại trong ứng dụng khi sự kiện còn mở đăng ký và còn chỗ trống.
+    Bạn có thể kiểm tra lại thông tin, bổ sung các tài liệu minh chứng cần thiết và gửi lại yêu cầu mới trên ứng dụng UEvent nếu cần thiết.
 </p>
 
 <!-- CTA Button -->
@@ -74,7 +52,7 @@
 </table>
 
 <p style="margin-top: 36px; color: #374151; font-size: 14px;">
-    Cảm ơn bạn đã đồng hành cùng chúng tôi!<br>
+    Cảm ơn bạn đã quan tâm đến việc tổ chức sự kiện!<br>
     <strong style="color: #1a1a1a;">— Đội ngũ UEvent —</strong>
 </p>
 {% endblock content %}
