@@ -15,7 +15,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # SonarQube needs full history for blame information
       - name: Build CI image
         run: docker build -f Dockerfile.ci --target test -t uevent-ci .
       - name: Run tests
         run: docker run --rm -e CI=true -e USE_SQLITE=true -e SECRET_KEY=ci-secret-key uevent-ci
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
