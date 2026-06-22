@@ -91,6 +91,7 @@ class KeycloakJWTAuthentication(BaseAuthentication):
                 algorithms=settings.KEYCLOAK_JWT_ALGORITHMS,
                 issuer=settings.KEYCLOAK_ISSUER,
                 audience=settings.KEYCLOAK_AUDIENCE,
+                leeway=settings.KEYCLOAK_JWT_LEEWAY_SECONDS,
             )
         except jwt.ExpiredSignatureError as exc:
             raise AuthenticationFailed("Token has expired.") from exc

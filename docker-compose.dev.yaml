@@ -1,0 +1,25 @@
+# Development overrides for docker-compose.yaml.
+# Run with:
+#   docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up -d
+
+services:
+  app:
+    environment:
+      DEBUG: "true"
+      OTEL_ENABLED: "false"
+    volumes:
+      - .:/app
+
+  celery-worker:
+    environment:
+      DEBUG: "true"
+      OTEL_ENABLED: "false"
+    volumes:
+      - .:/app
+
+  notification-scheduler:
+    environment:
+      DEBUG: "true"
+      OTEL_ENABLED: "false"
+    volumes:
+      - .:/app
