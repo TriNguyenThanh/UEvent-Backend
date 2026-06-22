@@ -27,3 +27,32 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  e2e-test:
+    if: github.event.action != 'closed' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-playwright pytest-django
+
+      - name: Ensure browsers are installed
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        env:
+          CI: true
+          USE_SQLITE: true
+          SECRET_KEY: e2e-secret-key
+        run: pytest e2e_tests/
