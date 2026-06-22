@@ -17,12 +17,14 @@ from apps.events.models import Event
 from apps.interactions.models import (
     AIQuestionAnswerJob,
     # EventFeedback,
+    EventAIQASetting,
     EventQuestion,
     EventQuestionReply,
 )
 from apps.interactions.permissions import IsInteractionOwner
 from apps.interactions.serializers import (
     # EventFeedbackSerializer,
+    EventAIAssistantToggleSerializer,
     EventQuestionSerializer,
     EventQuestionReplySerializer,
     OrganizerEventQuestionSerializer,
@@ -505,39 +507,60 @@ class QuestionHideView(APIView):
         question.save(update_fields=["moderation_status", "updated_at"])
         return Response(EventQuestionSerializer(question).data, status=status.HTTP_200_OK)
 
-class ApplyAIAnswerView(APIView):
+
+class EventAIAssistantView(APIView):
+    """Read or toggle the AI assistant for an event."""
+
     permission_classes = [IsAuthenticated]
 
+    def get_event(self, request, event_id):
+        event = get_object_or_404(
+            Event.objects.prefetch_related("organizers"),
+            id=event_id,
+        )
+        assert_event_organizer(request, event)
+        return event
+
     @swagger_auto_schema(
-        operation_summary="Apply AI Draft Answer",
-        operation_description="Organizer duyệt và đăng AI draft thành reply.",
-        responses={201: EventQuestionReplySerializer(), **INTERACTION_ERROR_RESPONSES},
-        tags=["Questions"],
+        operation_summary="Get Event AI Assistant",
+        operation_description="Organizer xem trạng thái bật/tắt trợ lý AI.",
+        responses={200: EventAIAssistantToggleSerializer(), **INTERACTION_ERROR_RESPONSES},
+        tags=["AI Assistant"],
     )
-    def post(self, request, question_id):
-        question = get_object_or_404(
-            EventQuestion.objects.select_related("event", "ai_answer_job").prefetch_related(
-                "event__organizers"
-            ),
-            id=question_id,
-        )
-        assert_event_organizer(request, question.event)
-        job = getattr(question, "ai_answer_job", None)
-        if (
-            not job
-            or job.status != AIQuestionAnswerJob.Status.COMPLETED
-            or not job.draft_answer.strip()
-        ):
-            raise ValidationError("No valid AI draft answer is available for this question.")
-
-        reply = EventQuestionReply.objects.create(
-            question=question,
-            user=request.user,
-            content=job.draft_answer,
-            is_organizer_reply=True,
-        )
-
+    def get(self, request, event_id):
+        event = self.get_event(request, event_id)
+        is_enabled = EventAIQASetting.objects.filter(
+            event=event,
+            is_enabled=True,
+        ).exists()
         return Response(
-            EventQuestionReplySerializer(reply).data,
-            status=status.HTTP_201_CREATED,
+            EventAIAssistantToggleSerializer(
+                {"event_id": event.id, "is_enabled": is_enabled}
+            ).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="Toggle Event AI Assistant",
+        operation_description="Organizer bật hoặc tắt trợ lý AI cho sự kiện.",
+        request_body=EventAIAssistantToggleSerializer,
+        responses={200: EventAIAssistantToggleSerializer(), **INTERACTION_ERROR_RESPONSES},
+        tags=["AI Assistant"],
+    )
+    def patch(self, request, event_id):
+        event = self.get_event(request, event_id)
+        serializer = EventAIAssistantToggleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        setting, _ = EventAIQASetting.all_objects.update_or_create(
+            event=event,
+            defaults={
+                "is_enabled": serializer.validated_data["is_enabled"],
+                "deleted_at": None,
+            },
+        )
+        return Response(
+            EventAIAssistantToggleSerializer(
+                {"event_id": event.id, "is_enabled": setting.is_enabled}
+            ).data,
+            status=status.HTTP_200_OK,
         )

@@ -224,6 +224,11 @@ class QuestionAnswerSerializer(serializers.Serializer):
     answer_text = serializers.CharField(allow_blank=False)
 
 
+class EventAIAssistantToggleSerializer(serializers.Serializer):
+    event_id = serializers.UUIDField(read_only=True)
+    is_enabled = serializers.BooleanField()
+
+
 class AIQuestionAnswerJobSerializer(serializers.ModelSerializer):
     class Meta:
         model = AIQuestionAnswerJob
@@ -232,7 +237,6 @@ class AIQuestionAnswerJobSerializer(serializers.ModelSerializer):
             "status",
             "classification",
             "confidence",
-            "draft_answer",
             "reason",
             "error_code",
             "error_message",

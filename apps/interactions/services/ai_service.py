@@ -5,9 +5,14 @@ from decimal import Decimal, InvalidOperation
 
 import requests
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 
-from apps.interactions.models import AIQuestionAnswerJob, EventAITopic
+from apps.interactions.models import (
+    AIQuestionAnswerJob,
+    EventAITopic,
+    EventQuestionReply,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -100,6 +105,7 @@ class DifyAIQAService:
             cls._mark_failed(job, "invalid_response", str(exc))
 
     @classmethod
+    @transaction.atomic
     def _store_response(cls, job, ai_setting, response_data):
         workflow_data = response_data.get("data") or {}
         if workflow_data.get("status") not in (None, "succeeded"):
@@ -129,6 +135,7 @@ class DifyAIQAService:
         job.confidence = confidence
         job.reason = reason
         job.completed_at = now
+        existing_reply_id = (job.dify_metadata or {}).get("reply_id")
         job.dify_metadata = {
             "task_id": response_data.get("task_id"),
             "workflow_run_id": response_data.get("workflow_run_id"),
@@ -145,7 +152,21 @@ class DifyAIQAService:
             and answer
         ):
             job.status = AIQuestionAnswerJob.Status.COMPLETED
-            job.draft_answer = answer
+            job.draft_answer = ""
+            reply = None
+            if existing_reply_id:
+                reply = EventQuestionReply.objects.filter(
+                    pk=existing_reply_id,
+                    question=job.question,
+                ).first()
+            if reply is None:
+                reply = EventQuestionReply.objects.create(
+                    question=job.question,
+                    user=None,
+                    content=answer,
+                    is_organizer_reply=True,
+                )
+            job.dify_metadata["reply_id"] = str(reply.id)
         else:
             job.status = AIQuestionAnswerJob.Status.SKIPPED
             job.draft_answer = ""

@@ -201,6 +201,51 @@ class InteractionApiTests(APITestCase):
         defaults.update(overrides)
         return EventAIQASetting.objects.create(**defaults)
 
+    def test_organizer_can_read_and_toggle_ai_assistant(self):
+        url = reverse("event-ai-assistant", kwargs={"event_id": self.event.id})
+        self.client.force_authenticate(self.other_user)
+
+        initial_response = self.client.get(url)
+        enabled_response = self.client.patch(
+            url,
+            {"is_enabled": True},
+            format="json",
+        )
+        disabled_response = self.client.patch(
+            url,
+            {"is_enabled": False},
+            format="json",
+        )
+
+        self.assertEqual(initial_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(initial_response.data["is_enabled"])
+        self.assertEqual(enabled_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(enabled_response.data["is_enabled"])
+        self.assertEqual(disabled_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(disabled_response.data["is_enabled"])
+        self.assertFalse(EventAIQASetting.objects.get(event=self.event).is_enabled)
+
+    def test_non_organizer_cannot_toggle_ai_assistant(self):
+        response = self.client.patch(
+            reverse("event-ai-assistant", kwargs={"event_id": self.event.id}),
+            {"is_enabled": True},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(EventAIQASetting.objects.filter(event=self.event).exists())
+
+    def test_ai_assistant_toggle_requires_boolean_state(self):
+        self.client.force_authenticate(self.other_user)
+        response = self.client.patch(
+            reverse("event-ai-assistant", kwargs={"event_id": self.event.id}),
+            {},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("is_enabled", response.data["errors"])
+
     def create_ai_job(self, question, **overrides):
         defaults = {
             "question": question,
@@ -273,7 +318,7 @@ class InteractionApiTests(APITestCase):
         DIFY_TIMEOUT_SECONDS=5,
     )
     @patch("apps.interactions.services.ai_service.requests.post")
-    def test_dify_success_without_workflow_id_stores_draft(self, mock_post):
+    def test_dify_success_publishes_reply_without_confirmation(self, mock_post):
         question = EventQuestion.objects.create(
             event=self.event,
             user=self.user,
@@ -302,8 +347,15 @@ class InteractionApiTests(APITestCase):
 
         job.refresh_from_db()
         self.assertEqual(job.status, AIQuestionAnswerJob.Status.COMPLETED)
-        self.assertEqual(job.draft_answer, "Yes, after the event.")
-        self.assertFalse(EventQuestionReply.objects.filter(question=question).exists())
+        self.assertEqual(job.draft_answer, "")
+        reply = EventQuestionReply.objects.get(question=question)
+        self.assertEqual(reply.content, "Yes, after the event.")
+        self.assertIsNone(reply.user)
+        self.assertTrue(reply.is_organizer_reply)
+        self.assertEqual(job.dify_metadata["reply_id"], str(reply.id))
+
+        DifyAIQAService.call_dify_workflow(question, ai_setting, job)
+        self.assertEqual(EventQuestionReply.objects.filter(question=question).count(), 1)
         self.assertEqual(
             mock_post.call_args.args[0],
             "https://api.dify.test/v1/workflows/run",
@@ -389,57 +441,3 @@ class InteractionApiTests(APITestCase):
         job.refresh_from_db()
         self.assertEqual(job.status, AIQuestionAnswerJob.Status.FAILED)
         self.assertEqual(job.error_code, "http_error")
-
-    def test_ai_draft_is_visible_only_in_organizer_question_api(self):
-        question = EventQuestion.objects.create(
-            event=self.event,
-            user=self.user,
-            question_text="Will slides be shared?",
-        )
-        self.create_ai_job(
-            question,
-            status=AIQuestionAnswerJob.Status.COMPLETED,
-            classification=AIQuestionAnswerJob.Classification.ANSWERABLE,
-            confidence=Decimal("0.9000"),
-            draft_answer="Organizer-only draft",
-        )
-
-        public_response = self.client.get(
-            f"/api/v1/events/{self.event.id}/questions/public/"
-        )
-        self.client.force_authenticate(self.other_user)
-        organizer_response = self.client.get(
-            f"/api/v1/events/{self.event.id}/questions/"
-        )
-
-        self.assertNotIn("ai_answer_job", public_response.data["results"][0])
-        organizer_question = organizer_response.data["results"][0]
-        self.assertEqual(
-            organizer_question["ai_answer_job"]["draft_answer"],
-            "Organizer-only draft",
-        )
-
-    def test_only_organizer_can_apply_completed_ai_draft(self):
-        question = EventQuestion.objects.create(
-            event=self.event,
-            user=self.user,
-            question_text="Will slides be shared?",
-        )
-        self.create_ai_job(
-            question,
-            status=AIQuestionAnswerJob.Status.COMPLETED,
-            classification=AIQuestionAnswerJob.Classification.ANSWERABLE,
-            confidence=Decimal("0.9000"),
-            draft_answer="Yes, after the event.",
-        )
-        url = f"/api/v1/questions/{question.id}/ai-answer/apply/"
-
-        forbidden_response = self.client.post(url, format="json")
-        self.client.force_authenticate(self.other_user)
-        applied_response = self.client.post(url, format="json")
-
-        self.assertEqual(forbidden_response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(applied_response.status_code, status.HTTP_201_CREATED)
-        reply = EventQuestionReply.objects.get(question=question)
-        self.assertEqual(reply.content, "Yes, after the event.")
-        self.assertTrue(reply.is_organizer_reply)

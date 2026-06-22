@@ -1,9 +1,9 @@
 from django.urls import path
 
 from apps.interactions.views import (
-    ApplyAIAnswerView,
     # EventFeedbackListCreateView,
     # EventFeedbackSummaryView,
+    EventAIAssistantView,
     EventPublicQuestionListView,
     EventQuestionListCreateView,
     # FeedbackDetailView,
@@ -20,10 +20,14 @@ urlpatterns = [
     path("questions/<uuid:pk>/", QuestionDetailView.as_view(), name="question-detail"),
     # path("events/<uuid:event_id>/feedbacks/", EventFeedbackListCreateView.as_view(), name="event-feedback-list-create"),
     # path("events/<uuid:event_id>/feedbacks/summary/", EventFeedbackSummaryView.as_view(), name="event-feedback-summary"),
+    path(
+        "events/<uuid:event_id>/ai-assistant/",
+        EventAIAssistantView.as_view(),
+        name="event-ai-assistant",
+    ),
     path("events/<uuid:event_id>/questions/", EventQuestionListCreateView.as_view(), name="event-question-list-create"),
     path("events/<uuid:event_id>/questions/public/", EventPublicQuestionListView.as_view(), name="event-question-public-list"),
     path("questions/<uuid:question_id>/answer/", QuestionAnswerView.as_view(), name="question-answer"),
-    path("questions/<uuid:question_id>/ai-answer/apply/", ApplyAIAnswerView.as_view(),name="question-ai-answer-apply"),
     path("questions/<uuid:question_id>/replies/", QuestionReplyListCreateView.as_view(), name="question-reply-list-create"),
     path("questions/<uuid:question_id>/pin/", QuestionPinView.as_view(), name="question-pin"),
     path("questions/<uuid:question_id>/hide/", QuestionHideView.as_view(), name="question-hide"),
