@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "drf_yasg",
     "django_filters",
     "apps.users",
+    "apps.organizer_requests",
     "apps.locations",
     "apps.events",
     "apps.registrations",

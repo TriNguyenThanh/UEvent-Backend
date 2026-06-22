@@ -27,6 +27,8 @@ class FcmClient:
         "invalid-registration-token",
         "invalid-argument",
         "sender-id-mismatch",
+        "NOT_FOUND",
+        "UNREGISTERED",
     }
     RETRYABLE_ERROR_CODES = {
         "internal",
