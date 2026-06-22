@@ -25,6 +25,7 @@ from apps.users.models import User
 
 class InteractionApiTests(APITestCase):
     def setUp(self):
+        from django.conf import settings as django_settings
         self.user = User.objects.create_user(
             username="attendee",
             email="attendee@example.com",
@@ -33,6 +34,13 @@ class InteractionApiTests(APITestCase):
         self.other_user = User.objects.create_user(
             username="other",
             email="other@example.com",
+            password="testpass123",
+        )
+        # Create Dify AI Assistant user required for automated replies
+        User.objects.create_user(
+            id=django_settings.DIFY_AI_ASSISTANT_USER_ID,
+            username="ai_assistant",
+            email="ai-assistant@example.com",
             password="testpass123",
         )
         self.category = EventCategory.objects.create(name="Workshop", slug="workshop")
@@ -350,7 +358,8 @@ class InteractionApiTests(APITestCase):
         self.assertEqual(job.draft_answer, "")
         reply = EventQuestionReply.objects.get(question=question)
         self.assertEqual(reply.content, "Yes, after the event.")
-        self.assertIsNone(reply.user)
+        from django.conf import settings as django_settings
+        self.assertEqual(str(reply.user_id), django_settings.DIFY_AI_ASSISTANT_USER_ID)
         self.assertTrue(reply.is_organizer_reply)
         self.assertEqual(job.dify_metadata["reply_id"], str(reply.id))
 
