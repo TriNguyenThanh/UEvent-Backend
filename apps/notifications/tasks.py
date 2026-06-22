@@ -1,6 +1,7 @@
 from celery import shared_task
 from django.conf import settings
 
+from apps.notifications.action_urls import build_event_action_url
 from apps.notifications.services.push_delivery_service import PushDeliveryService
 
 
@@ -105,7 +106,7 @@ def send_event_updated_emails_task(event_id: str, user_ids: list[str], changes: 
                 "event": event,
                 "changes": template_changes,
                 "what_changed": what_changed,
-                "action_url": f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/app-redirect?target=event_user&event_id={event.id}",
+                "action_url": build_event_action_url(event.slug),
             }
         )
         

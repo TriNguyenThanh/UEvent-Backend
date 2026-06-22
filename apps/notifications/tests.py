@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.events.models import Event, EventCategory, EventOrganizer
+from apps.notifications.action_urls import build_event_action_url
 from apps.notifications.models import (
     Notification,
     NotificationPreference,
@@ -19,6 +20,15 @@ from apps.notifications.services.push_delivery_service import (
 )
 from apps.users.models import UserSession
 from common.response_codes import ResponseCode
+
+
+class NotificationActionUrlTests(TestCase):
+    @override_settings(PUBLIC_WEB_BASE_URL="https://uevent.example/")
+    def test_build_event_action_url_uses_event_slug(self):
+        self.assertEqual(
+            build_event_action_url("career-workshop"),
+            "https://uevent.example/events/share/career-workshop",
+        )
 
 
 class FakeFcmClient:

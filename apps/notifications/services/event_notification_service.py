@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from apps.events.models import Event, EventOrganizer
 from apps.events.services import OrganizerEventService
+from apps.notifications.action_urls import build_event_action_url
 from apps.notifications.models import Notification, NotificationRecipient
 from apps.registrations.models import EventRegistration
 from common.exceptions import ValidationError
@@ -194,6 +195,12 @@ class EventNotificationService:
     def _send_registration_confirmed_email(registration: EventRegistration) -> None:
         event = registration.event
         ticket = getattr(registration, "ticket", None)
+        action_url = (
+            f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/app-redirect"
+            f"?target=ticket&event_id={event.id}&ticket_id={ticket.id}"
+            if ticket
+            else build_event_action_url(event.slug)
+        )
         lines = [
             EventNotificationService._greeting_for(registration.user),
             "",
@@ -227,7 +234,7 @@ class EventNotificationService:
                 "end_time_str": end_at.strftime("%H:%M ngày %d/%m/%Y") if end_at else None,
                 "location_str": EventNotificationService._format_event_location(event),
                 "ticket_code": ticket.ticket_code if ticket else None,
-                "action_url": f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/app-redirect?target={'ticket' if ticket else 'event_user'}&event_id={event.id}&ticket_id={ticket.id if ticket else ''}",
+                "action_url": action_url,
             }
         )
         
@@ -270,7 +277,7 @@ class EventNotificationService:
                 "start_time_str": start_at.strftime("%H:%M ngày %d/%m/%Y"),
                 "end_time_str": end_at.strftime("%H:%M ngày %d/%m/%Y") if end_at else None,
                 "location_str": EventNotificationService._format_event_location(event),
-                "action_url": f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/app-redirect?target=event_user&event_id={event.id}",
+                "action_url": build_event_action_url(event.slug),
             }
         )
         
@@ -317,7 +324,7 @@ class EventNotificationService:
                 "end_time_str": end_at.strftime("%H:%M ngày %d/%m/%Y") if end_at else None,
                 "location_str": EventNotificationService._format_event_location(event),
                 "cancel_reason": registration.cancel_reason,
-                "action_url": f"{getattr(settings, 'PUBLIC_WEB_BASE_URL', 'http://localhost:3000')}/app-redirect?target=event_user&event_id={event.id}",
+                "action_url": build_event_action_url(event.slug),
             }
         )
         
