@@ -261,7 +261,7 @@ DIFY_AI_QA_ENABLED = env.bool("DIFY_AI_QA_ENABLED", default=False)
 DIFY_API_BASE_URL = env.str("DIFY_API_BASE_URL", default="https://api.dify.ai/v1")
 DIFY_API_KEY = env.str("DIFY_API_KEY", default="")
 DIFY_TIMEOUT_SECONDS = env.int("DIFY_TIMEOUT_SECONDS", default=30)
-
+DIFY_AI_ASSISTANT_USER_ID = env.str("DIFY_AI_ASSISTANT_USER_ID", default="615a4c87-45c6-4114-a2f5-faa50b19cb49")
 # ── Cache (Redis) ──
 if CI or USE_SQLITE:
     CACHES = {

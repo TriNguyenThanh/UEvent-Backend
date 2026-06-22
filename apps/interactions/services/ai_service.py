@@ -13,7 +13,7 @@ from apps.interactions.models import (
     EventAITopic,
     EventQuestionReply,
 )
-
+from apps.users.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -160,9 +160,13 @@ class DifyAIQAService:
                     question=job.question,
                 ).first()
             if reply is None:
+                print("Creating new EventQuestionReply for question:", job.question_id)
+                user = User.objects.filter(pk=settings.DIFY_AI_ASSISTANT_USER_ID).first()
+                if user is None:
+                    raise ValueError("Dify AI Assistant user not found.")
                 reply = EventQuestionReply.objects.create(
                     question=job.question,
-                    user=None,
+                    user=user,
                     content=answer,
                     is_organizer_reply=True,
                 )

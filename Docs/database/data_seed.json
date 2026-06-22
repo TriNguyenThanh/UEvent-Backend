@@ -66,6 +66,32 @@
   },
   {
     "model": "users.user",
+    "pk": "615a4c87-45c6-4114-a2f5-faa50b19cb49",
+    "fields": {
+      "password": "",
+      "last_login": null,
+      "is_superuser": true,
+      "username": "AI Assistant",
+      "first_name": "AI",
+      "last_name": "Assistant",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-05-17T08:00:00Z",
+      "email": "ai-assistant@utc2.edu.vn",
+      "created_at": "2026-05-17T08:00:00Z",
+      "updated_at": "2026-05-17T08:00:00Z",
+      "deleted_at": null,
+      "student_code": null,
+      "full_name": "AI Assistant",
+      "phone_number": "",
+      "avatar_url": "",
+      "account_status": "active",
+      "faculty": "Phong Cong tac Sinh vien",
+      "class_name": "ORGANIZER"
+    }
+  },
+  {
+    "model": "users.user",
     "pk": "615a4c87-45c6-4114-a2f5-faa50b19cb63",
     "fields": {
       "password": "",
