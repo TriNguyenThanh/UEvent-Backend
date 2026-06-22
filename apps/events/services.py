@@ -232,7 +232,7 @@ class OrganizerEventService:
                 if snapshot:
                     return snapshot
                 if room_id:
-                    from apps.events.models import Room
+                    from apps.locations.models import Room
                     try:
                         room = Room.objects.get(pk=room_id)
                         name = getattr(room, "name", "") or ""
